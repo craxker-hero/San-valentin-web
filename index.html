@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>San Valentín</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: pink;
+            font-family: Arial, sans-serif;
+            flex-direction: column;
+            text-align: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2em;
+            color: red;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            position: relative;
+            z-index: 2;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
+        }
+
+        .yes {
+            background-color: green;
+            color: white;
+        }
+
+        .no {
+            background-color: red;
+            color: white;
+        }
+
+        .mensaje {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            color: red;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 3;
+        }
+
+        /* Confeti más lento */
+        .confeti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: yellow;
+            border-radius: 50%;
+            animation: caer 4s ease-out forwards;
+        }
+
+        @keyframes caer {
+            from {
+                transform: translateY(-50vh);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(100vh);
+                opacity: 0;
+            }
+        }
+
+        /* Corazones flotando más lentamente y más arriba */
+        .heart {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: red;
+            transform: rotate(-45deg);
+            animation: float 8s linear infinite;
+            opacity: 1;
+        }
+
+        .heart::before,
+        .heart::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: red;
+            border-radius: 50%;
+        }
+
+        .heart::before {
+            top: -10px;
+            left: 0;
+        }
+
+        .heart::after {
+            left: 10px;
+            top: 0;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(-45deg) scale(0.5);
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-20vh) rotate(-45deg) scale(1.2);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>¿Quieres ser mi San Valentín?</h1>
+    <div class="buttons">
+        <button class="yes" onclick="mostrarMensaje()">Sí</button>
+        <button class="no" onclick="moverBoton()">No</button>
+    </div>
+
+    <div class="mensaje" id="mensaje">Siempre supe que dirías que sí, amor >:D</div>
+
+    <script>
+        function moverBoton() {
+            let btnNo = document.querySelector('.no');
+            let maxX = window.innerWidth - btnNo.clientWidth - 100; // Límites para no salirse
+            let maxY = window.innerHeight - btnNo.clientHeight - 100;
+
+            let x = Math.random() * maxX;
+            let y = Math.random() * maxY;
+
+            btnNo.style.position = "absolute";
+            btnNo.style.left = `${x}px`;
+            btnNo.style.top = `${y}px`;
+        }
+
+        function mostrarMensaje() {
+            document.getElementById("mensaje").style.display = "block";
+            generarConfeti();
+        }
+
+        // Confeti más lento
+        function generarConfeti() {
+            for (let i = 0; i < 50; i++) {
+                let confeti = document.createElement("div");
+                confeti.classList.add("confeti");
+                document.body.appendChild(confeti);
+                confeti.style.left = `${Math.random() * 100}vw`;
+                confeti.style.animationDuration = `${Math.random() * 4 + 2}s`;
+                confeti.style.backgroundColor = ["red", "yellow", "blue", "green", "purple"][Math.floor(Math.random() * 5)];
+
+                setTimeout(() => confeti.remove(), 4000);
+            }
+        }
+
+        // Corazones subiendo más alto sin pausa
+        function crearCorazon() {
+            let heart = document.createElement("div");
+            heart.classList.add("heart");
+            document.body.appendChild(heart);
+            heart.style.left = `${Math.random() * 100}vw`;
+            heart.style.animationDuration = `${Math.random() * 8 + 5}s`;
+
+            setTimeout(() => {
+                heart.remove();
+                crearCorazon();
+            }, 8000);
+        }
+
+        function controlarCorazones() {
+            let corazonesActuales = document.querySelectorAll(".heart").length;
+            while (corazonesActuales < 15) {
+                crearCorazon();
+                corazonesActuales++;
+            }
+        }
+
+        setInterval(controlarCorazones, 1000);
+        controlarCorazones();
+    </script>
+</body>
+</html>
