@@ -150,10 +150,14 @@
     <div class="mensaje" id="mensaje">Siempre supe que dirías que sí, amor >:D</div>
 
     <script>
+        // Colores para el confeti
+        const coloresConfeti = ["red", "yellow", "blue", "green", "purple"];
+
+        // Mover el botón "No" de manera aleatoria sin salirse de la pantalla
         function moverBoton() {
             let btnNo = document.querySelector('.no');
-            let maxX = window.innerWidth - btnNo.clientWidth - 100; // Límites para no salirse
-            let maxY = window.innerHeight - btnNo.clientHeight - 100;
+            let maxX = window.innerWidth - btnNo.clientWidth;
+            let maxY = window.innerHeight - btnNo.clientHeight;
 
             let x = Math.random() * maxX;
             let y = Math.random() * maxY;
@@ -163,12 +167,13 @@
             btnNo.style.top = `${y}px`;
         }
 
+        // Mostrar el mensaje y generar confeti
         function mostrarMensaje() {
             document.getElementById("mensaje").style.display = "block";
             generarConfeti();
         }
 
-        // Confeti más lento
+        // Generar confeti
         function generarConfeti() {
             for (let i = 0; i < 50; i++) {
                 let confeti = document.createElement("div");
@@ -176,13 +181,13 @@
                 document.body.appendChild(confeti);
                 confeti.style.left = `${Math.random() * 100}vw`;
                 confeti.style.animationDuration = `${Math.random() * 4 + 2}s`;
-                confeti.style.backgroundColor = ["red", "yellow", "blue", "green", "purple"][Math.floor(Math.random() * 5)];
+                confeti.style.backgroundColor = coloresConfeti[Math.floor(Math.random() * coloresConfeti.length)];
 
                 setTimeout(() => confeti.remove(), 4000);
             }
         }
 
-        // Corazones subiendo más alto sin pausa
+        // Crear corazones
         function crearCorazon() {
             let heart = document.createElement("div");
             heart.classList.add("heart");
@@ -190,12 +195,10 @@
             heart.style.left = `${Math.random() * 100}vw`;
             heart.style.animationDuration = `${Math.random() * 8 + 5}s`;
 
-            setTimeout(() => {
-                heart.remove();
-                crearCorazon();
-            }, 8000);
+            setTimeout(() => heart.remove(), 8000);
         }
 
+        // Controlar la cantidad de corazones en pantalla
         function controlarCorazones() {
             let corazonesActuales = document.querySelectorAll(".heart").length;
             while (corazonesActuales < 15) {
@@ -204,6 +207,7 @@
             }
         }
 
+        // Iniciar el sistema de corazones
         setInterval(controlarCorazones, 1000);
         controlarCorazones();
     </script>
