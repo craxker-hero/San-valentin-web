@@ -10,7 +10,6 @@
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             display: flex;
             justify-content: center;
@@ -72,10 +71,10 @@
             animation: floatUp linear infinite, fadeOut linear;
         }
 
-@keyframes floatUp {
-    from { transform: translateY(100vh); opacity: 1; }
-    to { transform: translateY(-90vh); opacity: 1; }
-}
+        @keyframes floatUp { 
+            from { transform: translateY(100vh); opacity: 1; } 
+            to { transform: translateY(-90vh); opacity: 1; } 
+        }
 
         @keyframes fadeOut {
             0% { opacity: 1; }
@@ -107,11 +106,9 @@
             text-shadow: 2px 2px 4px black;
             display: none;
         }
-
     </style>
 </head>
 <body>
-
     <div class="container">
         <h1>¿Quieres ser mi San Valentín?</h1>
         <div class="buttons">
@@ -161,12 +158,13 @@
             
             let currentSize = parseFloat(window.getComputedStyle(noButton).fontSize);
             
-            if (currentSize > 5) { 
+            if (currentSize > 10) { 
                 noButton.style.fontSize = (currentSize - 2) + "px";
                 noButton.style.padding = (parseFloat(noButton.style.padding) - 1) + "px";
             } else {
-                let randomX = (Math.random() * 4 - 2) + "cm"; 
-                let randomY = (Math.random() * 4 - 2) + "cm"; 
+                // Mover el botón dentro de un radio de 2 cm
+                let randomX = (Math.random() * 4 - 2) + "cm"; // Entre -2cm y 2cm en el eje X
+                let randomY = (Math.random() * 4 - 2) + "cm"; // Entre -2cm y 2cm en el eje Y
                 noButton.style.transform = `translate(${randomX}, ${randomY})`;
             }
 
@@ -195,6 +193,5 @@
 
         setInterval(createHeart, 300);
     </script>
-
 </body>
 </html>
