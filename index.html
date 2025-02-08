@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>San Valentín</title>
+    <title>¿Quieres ser mi San Valentín?</title>
     <style>
         * {
             margin: 0;
@@ -18,198 +18,183 @@
             height: 100vh;
             background-color: pink;
             font-family: Arial, sans-serif;
-            flex-direction: column;
-            text-align: center;
             overflow: hidden;
             position: relative;
+            flex-direction: column;
+        }
+
+        .container {
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            margin-bottom: 50px;
         }
 
         h1 {
             font-size: 2em;
-            color: red;
-            margin-bottom: 20px;
-            position: relative;
-            z-index: 2;
+            margin-bottom: 50px;
         }
 
         .buttons {
             display: flex;
             justify-content: center;
-            gap: 50px;
-            position: relative;
-            z-index: 2;
+            align-items: center;
+            gap: 40px;
         }
 
         button {
+            font-size: 18px;
             padding: 10px 20px;
-            font-size: 1.2em;
             border: none;
             cursor: pointer;
-            transition: 0.3s;
-            position: relative;
+            transition: all 0.3s ease-in-out;
+            border-radius: 10px;
         }
 
-        .yes {
+        #yes {
             background-color: green;
             color: white;
         }
 
-        .no {
+        #no {
             background-color: red;
             color: white;
+            font-size: 18px;
+            padding: 10px 20px;
+            position: relative;
         }
 
-        .mensaje {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 2em;
-            color: red;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            display: none;
-            z-index: 3;
-        }
-
-        /* Confeti más lento */
-        .confeti {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background-color: yellow;
-            border-radius: 50%;
-            animation: caer 4s ease-out forwards;
-        }
-
-        @keyframes caer {
-            from {
-                transform: translateY(-50vh);
-                opacity: 1;
-            }
-            to {
-                transform: translateY(100vh);
-                opacity: 0;
-            }
-        }
-
-        /* Corazones flotando más lentamente y más arriba */
+        /* Animación de los corazones */
         .heart {
             position: absolute;
-            width: 20px;
-            height: 20px;
-            background-color: red;
-            transform: rotate(-45deg);
-            animation: float 8s linear infinite;
-            opacity: 1;
+            color: red;
+            font-size: 30px;
+            animation: floatUp linear infinite, fadeOut linear;
         }
 
-        .heart::before,
-        .heart::after {
-            content: '';
+@keyframes floatUp {
+    from { transform: translateY(100vh); opacity: 1; }
+    to { transform: translateY(-90vh); opacity: 1; }
+}
+
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            70% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Animación de explosión de corazones */
+        .explosion {
             position: absolute;
-            width: 20px;
-            height: 20px;
-            background-color: red;
-            border-radius: 50%;
+            font-size: 20px;
+            animation: explode 1s ease-out forwards;
         }
 
-        .heart::before {
-            top: -10px;
-            left: 0;
+        @keyframes explode {
+            0% { transform: scale(1) translate(0, 0); opacity: 1; }
+            100% { transform: scale(1.5) translate(var(--x), var(--y)); opacity: 0; }
         }
 
-        .heart::after {
-            left: 10px;
-            top: 0;
+        /* Mensaje de respuesta */
+        #message {
+            position: absolute;
+            top: calc(20% - 3cm);
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px black;
+            display: none;
         }
 
-        @keyframes float {
-            0% {
-                transform: translateY(100vh) rotate(-45deg) scale(0.5);
-                opacity: 1;
-            }
-            90% {
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(-20vh) rotate(-45deg) scale(1.2);
-                opacity: 0;
-            }
-        }
     </style>
 </head>
 <body>
-    <h1>¿Quieres ser mi San Valentín?</h1>
-    <div class="buttons">
-        <button class="yes" onclick="mostrarMensaje()">Sí</button>
-        <button class="no" onclick="moverBoton()">No</button>
+
+    <div class="container">
+        <h1>¿Quieres ser mi San Valentín?</h1>
+        <div class="buttons">
+            <button id="yes" onclick="sayYes()">Sí</button>
+            <button id="no" onclick="shrinkNo()">No</button>
+        </div>
+        <div id="message"></div>
     </div>
 
-    <div class="mensaje" id="mensaje">Siempre supe que dirías que sí, amor >:D</div>
-
     <script>
-        // Colores para el confeti
-        const coloresConfeti = ["red", "yellow", "blue", "green", "purple"];
+        let noMessages = [
+            "¿Estás seguro? 🙃",
+            "Piénsalo bien... 🤨",
+            "Me estás rompiendo el corazón 💔",
+            "Aún tienes otra oportunidad 🥺",
+            "No acepto un no por respuesta 😤"
+        ];
+        let noIndex = 0;
 
-        // Mover el botón "No" de manera aleatoria sin salirse de la pantalla
-        function moverBoton() {
-            let btnNo = document.querySelector('.no');
-            let maxX = window.innerWidth - btnNo.clientWidth;
-            let maxY = window.innerHeight - btnNo.clientHeight;
+        function sayYes() {
+            let message = document.getElementById("message");
+            message.innerText = "¡Siempre supe que dirías que sí, amor! >:D";
+            message.style.display = "block";
 
-            let x = Math.random() * maxX;
-            let y = Math.random() * maxY;
+            for (let i = 0; i < 10; i++) {
+                let heart = document.createElement("span");
+                heart.innerHTML = "❤️";
+                heart.classList.add("explosion");
 
-            btnNo.style.position = "absolute";
-            btnNo.style.left = `${x}px`;
-            btnNo.style.top = `${y}px`;
-        }
+                let buttonYes = document.getElementById("yes");
+                let rect = buttonYes.getBoundingClientRect();
+                heart.style.left = `${rect.left + rect.width / 2}px`;
+                heart.style.top = `${rect.top + rect.height / 2}px`;
 
-        // Mostrar el mensaje y generar confeti
-        function mostrarMensaje() {
-            document.getElementById("mensaje").style.display = "block";
-            generarConfeti();
-        }
+                heart.style.setProperty("--x", `${Math.random() * 200 - 100}px`);
+                heart.style.setProperty("--y", `${Math.random() * 200 - 100}px`);
 
-        // Generar confeti
-        function generarConfeti() {
-            for (let i = 0; i < 50; i++) {
-                let confeti = document.createElement("div");
-                confeti.classList.add("confeti");
-                document.body.appendChild(confeti);
-                confeti.style.left = `${Math.random() * 100}vw`;
-                confeti.style.animationDuration = `${Math.random() * 4 + 2}s`;
-                confeti.style.backgroundColor = coloresConfeti[Math.floor(Math.random() * coloresConfeti.length)];
+                document.body.appendChild(heart);
 
-                setTimeout(() => confeti.remove(), 4000);
+                setTimeout(() => heart.remove(), 1000);
             }
         }
 
-        // Crear corazones
-        function crearCorazon() {
-            let heart = document.createElement("div");
+        function shrinkNo() {
+            let noButton = document.getElementById("no");
+            let message = document.getElementById("message");
+            
+            let currentSize = parseFloat(window.getComputedStyle(noButton).fontSize);
+            
+            if (currentSize > 5) { 
+                noButton.style.fontSize = (currentSize - 2) + "px";
+                noButton.style.padding = (parseFloat(noButton.style.padding) - 1) + "px";
+            } else {
+                let randomX = (Math.random() * 4 - 2) + "cm"; 
+                let randomY = (Math.random() * 4 - 2) + "cm"; 
+                noButton.style.transform = `translate(${randomX}, ${randomY})`;
+            }
+
+            message.innerText = noMessages[noIndex];
+            message.style.display = "block";
+
+            noIndex = (noIndex + 1) % noMessages.length;
+        }
+
+        function createHeart() {
+            const heart = document.createElement("div");
             heart.classList.add("heart");
+            heart.innerHTML = "❤️";
             document.body.appendChild(heart);
-            heart.style.left = `${Math.random() * 100}vw`;
-            heart.style.animationDuration = `${Math.random() * 8 + 5}s`;
 
-            setTimeout(() => heart.remove(), 8000);
+            heart.style.left = Math.random() * 100 + "vw";
+            heart.style.bottom = "-20px";
+
+            let duration = Math.random() * 5 + 5; 
+            heart.style.animationDuration = duration + "s";
+
+            setTimeout(() => {
+                heart.remove();
+            }, duration * 1000);
         }
 
-        // Controlar la cantidad de corazones en pantalla
-        function controlarCorazones() {
-            let corazonesActuales = document.querySelectorAll(".heart").length;
-            while (corazonesActuales < 15) {
-                crearCorazon();
-                corazonesActuales++;
-            }
-        }
-
-        // Iniciar el sistema de corazones
-        setInterval(controlarCorazones, 1000);
-        controlarCorazones();
+        setInterval(createHeart, 300);
     </script>
+
 </body>
 </html>
