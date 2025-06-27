@@ -6,6 +6,13 @@
     <title>¿Quieres ser mi San Valentín?</title>
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Pacifico&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --color-heart: #ff6b6b;
+            --color-primary: #d23669;
+            --color-yes: #40c057;
+            --color-no: #fa5252;
+            --color-bg: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+        }
         * {
             margin: 0;
             padding: 0;
@@ -16,7 +23,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+            background: var(--color-bg);
             font-family: 'Arial', sans-serif;
             overflow: hidden;
             position: relative;
@@ -32,13 +39,14 @@
             background-color: rgba(255, 255, 255, 0.8);
             border-radius: 15px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
         }
 
         h1 {
             font-family: 'Dancing Script', cursive;
-            font-size: 3em;
+            font-size: clamp(2em, 8vw, 3em);
             margin-bottom: 30px;
-            color: #d23669;
+            color: var(--color-primary);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
         }
 
@@ -59,10 +67,11 @@
             border-radius: 50px;
             font-weight: bold;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            font-size: clamp(16px, 4vw, 18px);
         }
 
         #yes {
-            background-color: #40c057;
+            background-color: var(--color-yes);
             color: white;
         }
 
@@ -73,7 +82,7 @@
         }
 
         #no {
-            background-color: #fa5252;
+            background-color: var(--color-no);
             color: white;
             position: relative;
             transition: all 0.2s ease;
@@ -88,10 +97,11 @@
         /* Animación de los corazones */
         .heart {
             position: absolute;
-            color: #ff6b6b;
+            color: var(--color-heart);
             font-size: 24px;
             animation: floatUp linear infinite, fadeOut linear;
             pointer-events: none;
+            user-select: none;
         }
 
         @keyframes floatUp { 
@@ -112,6 +122,7 @@
             animation: explode 1s ease-out forwards;
             pointer-events: none;
             z-index: 20;
+            user-select: none;
         }
 
         @keyframes explode {
@@ -125,7 +136,7 @@
             top: 15%;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 24px;
+            font-size: clamp(18px, 5vw, 24px);
             font-weight: bold;
             color: white;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
@@ -144,7 +155,7 @@
             bottom: 20px;
             right: 20px;
             font-size: 16px;
-            color: #d23669;
+            color: var(--color-primary);
             background-color: rgba(255,255,255,0.7);
             padding: 5px 10px;
             border-radius: 20px;
@@ -158,6 +169,7 @@
             background-color: #f00;
             animation: confettiFall 5s linear forwards;
             pointer-events: none;
+            user-select: none;
         }
 
         @keyframes confettiFall {
@@ -165,28 +177,55 @@
             100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
         }
 
+        /* Efecto de vibración */
+        @keyframes shake {
+            0%, 100% { transform: translateX(-50%) rotate(0deg); }
+            20% { transform: translateX(-50%) rotate(-5deg); }
+            40% { transform: translateX(-50%) rotate(5deg); }
+            60% { transform: translateX(-50%) rotate(-5deg); }
+            80% { transform: translateX(-50%) rotate(5deg); }
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        /* Audio controls */
+        #audioControl {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 100;
+            border: none;
+            font-size: 20px;
+        }
+
         /* Responsive */
         @media (max-width: 600px) {
-            h1 {
-                font-size: 2em;
-            }
             .buttons {
                 gap: 15px;
             }
             button {
                 padding: 10px 20px;
-                font-size: 16px;
             }
             #message {
-                font-size: 18px;
                 top: 10%;
             }
         }
     </style>
 </head>
 <body>
+    <button id="audioControl" title="Toggle music">🎵</button>
     <div class="container">
-        <h1>¿Quieres ser mi San Valentín?</h1>
+        <h1 id="valentineQuestion">¿Quieres ser mi San Valentín?</h1>
         <div class="buttons">
             <button id="yes" onclick="sayYes()">¡Sí! ❤️</button>
             <button id="no" onmouseover="moveNo()" onclick="shrinkNo()">No 😢</button>
@@ -195,7 +234,25 @@
     </div>
     <div id="counter">Intentos: 0</div>
 
+    <audio id="backgroundMusic" loop>
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+        Tu navegador no soporta audio.
+    </audio>
+
+    <audio id="clickSound">
+        <source src="https://www.soundjay.com/buttons/sounds/button-09.mp3" type="audio/mpeg">
+    </audio>
+
+    <audio id="denySound">
+        <source src="https://www.soundjay.com/buttons/sounds/button-10.mp3" type="audio/mpeg">
+    </audio>
+
+    <audio id="successSound">
+        <source src="https://www.soundjay.com/buttons/sounds/button-21.mp3" type="audio/mpeg">
+    </audio>
+
     <script>
+        // Variables globales
         let noMessages = [
             "¿Estás seguro? 🙃",
             "Piénsalo bien... 🤨",
@@ -206,14 +263,79 @@
             "¿Tan difícil es elegir? 😅",
             "Mi corazón late por ti 💓",
             "El no no es una opción 😘",
-            "¡El sí es mucho más bonito! 🌹"
+            "¡El sí es mucho más bonito! 🌹",
+            "¡Persíguelo si puedes! 😏",
+            "Corre que te alcanzo 🏃‍♂️"
+        ];
+        let yesMessages = [
+            "¡Sabía que no podrías resistirte! 💘",
+            "¡Corazón, acabas de hacer mi día! 🌹",
+            "¡Ahora somos oficialmente San Valentín! 💍",
+            "¡El mejor sí de mi vida! 😍",
+            "¡Comienza nuestra aventura juntos! 💑"
         ];
         let noIndex = 0;
         let attempts = 0;
+        let maxHearts = 30;
+        let heartsCount = 0;
+        let heartInterval;
+        let isMusicPlaying = false;
+        const music = document.getElementById('backgroundMusic');
+        const audioControl = document.getElementById('audioControl');
+
+        // Elementos del DOM
+        const yesButton = document.getElementById('yes');
+        const noButton = document.getElementById('no');
+        const message = document.getElementById('message');
+        const counter = document.getElementById('counter');
+        const container = document.querySelector('.container');
+        const question = document.getElementById('valentineQuestion');
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            // Preguntar el nombre al cargar
+            const userName = prompt('¿Cómo te llamas, amor?', '');
+            if (userName) {
+                question.textContent = `${userName}, ¿quieres ser mi San Valentín?`;
+            }
+
+            // Iniciar corazones
+            heartInterval = setInterval(createHeart, 300);
+            
+            // Cargar intentos previos
+            if (localStorage.getItem('valentineAttempts')) {
+                attempts = parseInt(localStorage.getItem('valentineAttempts'));
+                counter.textContent = `Intentos: ${attempts}`;
+                
+                if (attempts > 5) {
+                    noButton.textContent = "No 😭";
+                }
+            }
+        });
+
+        // Control de audio
+        audioControl.addEventListener('click', () => {
+            if (isMusicPlaying) {
+                music.pause();
+                audioControl.textContent = '🎵';
+            } else {
+                music.play();
+                audioControl.textContent = '🔊';
+            }
+            isMusicPlaying = !isMusicPlaying;
+        });
+
+        function playSound(type) {
+            const sound = document.getElementById(`${type}Sound`);
+            sound.currentTime = 0;
+            sound.play().catch(e => console.log("No se pudo reproducir sonido:", e));
+        }
 
         function sayYes() {
-            let message = document.getElementById("message");
-            message.innerText = "¡Siempre supe que dirías que sí, amor! 💖\n¡Feliz San Valentín!";
+            playSound('success');
+            
+            // Mostrar mensaje aleatorio
+            message.textContent = yesMessages[Math.floor(Math.random() * yesMessages.length)];
             message.style.display = "block";
 
             // Explosión de corazones
@@ -227,17 +349,26 @@
             // Ocultar botones
             document.querySelector('.buttons').style.display = 'none';
 
-            // Reproducir sonido (opcional)
-            playSound('success');
+            // Detener corazones de fondo
+            clearInterval(heartInterval);
+            
+            // Mostrar mensaje especial si muchos intentos
+            if (attempts > 5) {
+                const finalMessage = document.createElement('div');
+                finalMessage.textContent = `Después de ${attempts} intentos, al fin aceptaste ❤️`;
+                finalMessage.style.marginTop = '20px';
+                finalMessage.style.fontWeight = 'bold';
+                finalMessage.style.color = 'var(--color-primary)';
+                container.appendChild(finalMessage);
+            }
         }
 
         function createExplosion() {
             let heart = document.createElement("span");
-            heart.innerHTML = "❤️";
+            heart.innerHTML = ["❤️", "💖", "💗", "💓", "💘"][Math.floor(Math.random() * 5)];
             heart.classList.add("explosion");
 
-            let buttonYes = document.getElementById("yes");
-            let rect = buttonYes.getBoundingClientRect();
+            let rect = yesButton.getBoundingClientRect();
             heart.style.left = `${rect.left + rect.width / 2}px`;
             heart.style.top = `${rect.top + rect.height / 2}px`;
 
@@ -251,7 +382,7 @@
 
         function createConfettiStorm() {
             const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
-            
+
             for (let i = 0; i < 150; i++) {
                 setTimeout(() => {
                     const confetti = document.createElement("div");
@@ -261,9 +392,9 @@
                     confetti.style.width = Math.random() * 10 + 5 + "px";
                     confetti.style.height = Math.random() * 10 + 5 + "px";
                     confetti.style.animationDuration = Math.random() * 3 + 2 + "s";
-                    
+
                     document.body.appendChild(confetti);
-                    
+
                     setTimeout(() => {
                         confetti.remove();
                     }, 5000);
@@ -272,58 +403,65 @@
         }
 
         function moveNo() {
-            if (attempts > 3) {
-                const noButton = document.getElementById("no");
-                const container = document.querySelector('.container');
-                const containerRect = container.getBoundingClientRect();
+            if (attempts >= 3) {
+                playSound('click');
                 
-                // Mover dentro del contenedor
+                const containerRect = container.getBoundingClientRect();
                 const maxX = containerRect.width - noButton.offsetWidth;
                 const maxY = containerRect.height - noButton.offsetHeight;
-                
+
+                // Mover a posición aleatoria dentro del contenedor
                 const randomX = Math.random() * maxX;
                 const randomY = Math.random() * maxY;
-                
+
                 noButton.style.position = 'absolute';
                 noButton.style.left = randomX + 'px';
                 noButton.style.top = randomY + 'px';
+                
+                // Cambiar texto después de 5 intentos
+                if (attempts >= 5 && !noButton.textContent.includes("😭")) {
+                    noButton.textContent = "No 😭";
+                }
             }
         }
 
         function shrinkNo() {
-            attempts++;
-            document.getElementById("counter").innerText = `Intentos: ${attempts}`;
+            playSound('deny');
             
-            let noButton = document.getElementById("no");
-            let message = document.getElementById("message");
+            attempts++;
+            counter.textContent = `Intentos: ${attempts}`;
+            localStorage.setItem('valentineAttempts', attempts.toString());
 
-            let currentSize = parseFloat(window.getComputedStyle(noButton).fontSize);
+            // Efecto de pulsación
+            noButton.style.transform = "scale(0.8)";
+            setTimeout(() => { noButton.style.transform = "scale(1)"; }, 200);
 
-            if (currentSize > 12) { 
-                noButton.style.fontSize = (currentSize - 2) + "px";
-                noButton.style.padding = (parseFloat(window.getComputedStyle(noButton).paddingLeft) - 2) + "px " + 
-                                       (parseFloat(window.getComputedStyle(noButton).paddingRight) - 2) + "px";
-            } else {
-                // Mover el botón a posición aleatoria
-                moveNo();
+            // Reducir tamaño después de 3 intentos
+            if (attempts >= 3) {
+                const currentSize = parseFloat(window.getComputedStyle(noButton).fontSize);
+                if (currentSize > 12) {
+                    noButton.style.fontSize = (currentSize - 1) + "px";
+                }
             }
 
-            message.innerText = noMessages[noIndex];
+            // Mostrar mensaje
+            message.textContent = noMessages[noIndex];
             message.style.display = "block";
-
-            // Efecto de temblor
-            message.style.animation = 'shake 0.5s';
-            setTimeout(() => {
-                message.style.animation = '';
-            }, 500);
+            message.classList.add("shake");
+            setTimeout(() => message.classList.remove("shake"), 500);
 
             noIndex = (noIndex + 1) % noMessages.length;
-            
-            // Reproducir sonido (opcional)
-            playSound('deny');
+
+            // Modo difícil después de 5 intentos
+            if (attempts === 5) {
+                message.textContent = "¡Modo difícil activado! 😈";
+                setTimeout(() => moveNo(), 500);
+            }
         }
 
         function createHeart() {
+            if (heartsCount >= maxHearts) return;
+            
             const heart = document.createElement("div");
             heart.classList.add("heart");
             heart.innerHTML = ["❤️", "💖", "💗", "💓", "💘"][Math.floor(Math.random() * 5)];
@@ -332,38 +470,17 @@
             heart.style.left = Math.random() * 100 + "vw";
             heart.style.bottom = "-20px";
 
-            let duration = Math.random() * 5 + 5; 
+            const duration = Math.random() * 5 + 5;
             heart.style.animationDuration = duration + "s";
             heart.style.fontSize = (Math.random() * 20 + 15) + "px";
 
+            heartsCount++;
+            
             setTimeout(() => {
                 heart.remove();
+                heartsCount--;
             }, duration * 1000);
         }
-
-        function playSound(type) {
-            // En un caso real, aquí cargarías archivos de audio
-            console.log(`Playing ${type} sound`);
-            // Ejemplo real necesitaría:
-            // const audio = new Audio('sound.mp3');
-            // audio.play();
-        }
-
-        // Corazones flotantes de fondo
-        setInterval(createHeart, 300);
-
-        // Efecto shake para CSS
-        const style = document.createElement('style');
-        style.innerHTML = `
-            @keyframes shake {
-                0%, 100% { transform: translateX(-50%) rotate(0deg); }
-                20% { transform: translateX(-50%) rotate(-5deg); }
-                40% { transform: translateX(-50%) rotate(5deg); }
-                60% { transform: translateX(-50%) rotate(-5deg); }
-                80% { transform: translateX(-50%) rotate(5deg); }
-            }
-        `;
-        document.head.appendChild(style);
     </script>
 </body>
 </html>
