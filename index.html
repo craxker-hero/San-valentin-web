@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador de Personajes de Danbooru</title>
+    <title>Buscador de Personajes - Danbooru</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -17,7 +17,7 @@
             text-align: center;
         }
         .search-container {
-            background-color: #fff;
+            background-color: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -31,7 +31,7 @@
             font-size: 16px;
         }
         button {
-            padding: 10px 20px;
+            padding: 10px 15px;
             background-color: #4CAF50;
             color: white;
             border: none;
@@ -44,7 +44,7 @@
             background-color: #45a049;
         }
         .results {
-            background-color: #fff;
+            background-color: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -56,106 +56,150 @@
             overflow-x: auto;
             white-space: pre-wrap;
         }
+        .character-card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
         .error {
             color: #d32f2f;
-            font-weight: bold;
+            background-color: #fde0e0;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <h1>Buscador de Personajes en Danbooru</h1>
+    <h1>Buscador de Personajes - Danbooru</h1>
     
     <div class="search-container">
-        <input type="text" id="seriesInput" placeholder="Ingresa el nombre de la serie (ej: 'fate stay night')">
-        <button onclick="searchCharacters()">Buscar Personajes</button>
+        <input type="text" id="searchInput" placeholder="Ejemplo: 'fate stay night', 'naruto', 'one piece'...">
+        <button onclick="searchCharacters()">Buscar</button>
     </div>
     
-    <div class="results" id="resultsContainer" style="display: none;">
-        <h2>Resultados en JSON:</h2>
-        <pre id="jsonResults"></pre>
+    <div class="loading" id="loadingIndicator">
+        <div class="spinner"></div>
+        <p>Buscando personajes...</p>
+    </div>
+    
+    <div class="results" id="resultsContainer">
+        <h2>Resultados</h2>
+        <div id="results"></div>
     </div>
 
     <script>
         async function searchCharacters() {
-            const seriesName = document.getElementById('seriesInput').value.trim();
-            const resultsContainer = document.getElementById('resultsContainer');
-            const jsonResults = document.getElementById('jsonResults');
-            
-            if (!seriesName) {
-                alert('Por favor ingresa el nombre de una serie');
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            if (!searchTerm) {
+                alert('Por favor ingresa un término de búsqueda');
                 return;
             }
+
+            // Mostrar indicador de carga
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('results').innerHTML = '';
             
             try {
-                // Primero buscamos la serie para obtener su ID
-                const seriesSearchUrl = `https://danbooru.donmai.us/tags.json?search[name_matches]=${encodeURIComponent(seriesName)}&search[category]=series`;
-                const seriesResponse = await fetch(seriesSearchUrl);
-                
-                if (!seriesResponse.ok) {
-                    throw new Error(`Error HTTP: ${seriesResponse.status}`);
-                }
-                
+                // Primero buscamos tags que coincidan con series/anime
+                const seriesResponse = await fetch(`https://danbooru.donmai.us/tags.json?search[name_matches]=${encodeURIComponent(searchTerm)}&search[category]=3`);
                 const seriesData = await seriesResponse.json();
                 
                 if (seriesData.length === 0) {
-                    jsonResults.textContent = 'No se encontró la serie especificada.';
-                    resultsContainer.style.display = 'block';
-                    return;
+                    throw new Error('No se encontraron series que coincidan con tu búsqueda');
                 }
                 
-                const seriesId = seriesData[0].id;
+                // Tomamos la serie más popular (ordenada por post_count desc por defecto)
+                const mostPopularSeries = seriesData[0];
+                const seriesName = mostPopularSeries.name;
                 
                 // Ahora buscamos personajes de esa serie
-                const charactersUrl = `https://danbooru.donmai.us/tags.json?search[category]=character&search[parent_id]=${seriesId}&limit=20`;
-                const charactersResponse = await fetch(charactersUrl);
-                
-                if (!charactersResponse.ok) {
-                    throw new Error(`Error HTTP: ${charactersResponse.status}`);
-                }
-                
+                const charactersResponse = await fetch(`https://danbooru.donmai.us/tags.json?search[category]=4&search[related_to]=${encodeURIComponent(seriesName)}&limit=50`);
                 const charactersData = await charactersResponse.json();
                 
                 if (charactersData.length === 0) {
-                    jsonResults.textContent = 'No se encontraron personajes para esta serie.';
-                    resultsContainer.style.display = 'block';
-                    return;
+                    throw new Error('No se encontraron personajes para esta serie');
                 }
                 
                 // Procesamos los resultados
                 const processedResults = charactersData.map(character => ({
                     nombre_completo: character.name,
                     valor: character.post_count,
-                    genero: getGenderFromName(character.name),
-                    serie: seriesData[0].name
+                    genero: getGenderFromTag(character.name),
+                    serie: seriesName
                 }));
                 
-                // Mostramos los resultados formateados en JSON
-                jsonResults.textContent = JSON.stringify(processedResults, null, 2);
-                resultsContainer.style.display = 'block';
+                // Mostrar resultados
+                displayResults(processedResults, seriesName);
                 
             } catch (error) {
-                jsonResults.textContent = `Error: ${error.message}`;
-                resultsContainer.style.display = 'block';
-                console.error('Error:', error);
+                document.getElementById('results').innerHTML = `
+                    <div class="error">
+                        Error: ${error.message}
+                    </div>
+                `;
+            } finally {
+                document.getElementById('loadingIndicator').style.display = 'none';
             }
         }
         
-        // Función auxiliar para intentar determinar el género del personaje
-        function getGenderFromName(name) {
-            const lowerName = name.toLowerCase();
-            
-            // Algunas convenciones comunes en los nombres de personajes
-            if (lowerName.includes('female') || lowerName.includes('girl') || 
-                lowerName.includes('woman') || lowerName.includes('_f_') || 
-                lowerName.endsWith('_(female)')) {
-                return 'Femenino';
-            } else if (lowerName.includes('male') || lowerName.includes('boy') || 
-                      lowerName.includes('man') || lowerName.includes('_m_') || 
-                      lowerName.endsWith('_(male)')) {
+        function getGenderFromTag(tagName) {
+            // Intenta determinar el género basado en convenciones comunes de tags
+            if (tagName.includes('male') || tagName.includes('_boy') || tagName.includes('_guy')) {
                 return 'Masculino';
+            } else if (tagName.includes('female') || tagName.includes('_girl')) {
+                return 'Femenino';
             } else {
                 return 'Desconocido';
             }
+        }
+        
+        function displayResults(results, seriesName) {
+            const resultsContainer = document.getElementById('results');
+            
+            // Mostrar como JSON
+            resultsContainer.innerHTML += `
+                <h3>Resultados en JSON para "${seriesName}"</h3>
+                <pre id="jsonOutput">${JSON.stringify(results, null, 2)}</pre>
+            `;
+            
+            // Mostrar también como tarjetas visuales
+            resultsContainer.innerHTML += `
+                <h3>Personajes encontrados (${results.length})</h3>
+                <div id="characterCards"></div>
+            `;
+            
+            const cardsContainer = document.getElementById('characterCards');
+            results.forEach(character => {
+                cardsContainer.innerHTML += `
+                    <div class="character-card">
+                        <strong>Nombre:</strong> ${character.nombre_completo}<br>
+                        <strong>Serie:</strong> ${character.serie}<br>
+                        <strong>Género:</strong> ${character.genero}<br>
+                        <strong>Popularidad:</strong> ${character.valor} posts<br>
+                    </div>
+                `;
+            });
         }
     </script>
 </body>
