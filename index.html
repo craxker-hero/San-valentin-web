@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador Danbooru</title>
+    <title>Buscador de Personajes de Danbooru</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -17,162 +17,146 @@
             text-align: center;
         }
         .search-container {
-            background-color: white;
+            background-color: #fff;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        input, button {
-            padding: 10px;
-            font-size: 16px;
-        }
-        input {
+        input[type="text"] {
             width: 70%;
-            margin-right: 10px;
+            padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            font-size: 16px;
         }
         button {
+            padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            font-size: 16px;
+            margin-left: 10px;
         }
         button:hover {
             background-color: #45a049;
         }
         .results {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-        }
-        .image-card {
-            background-color: white;
+            background-color: #fff;
+            padding: 20px;
             border-radius: 8px;
-            overflow: hidden;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .image-card img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        .image-info {
+        pre {
+            background-color: #f8f8f8;
             padding: 15px;
-        }
-        .series-info, .characters-info {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #f9f9f9;
             border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
         }
-        .tag {
-            display: inline-block;
-            background-color: #e0e0e0;
-            padding: 3px 6px;
-            border-radius: 3px;
-            margin: 2px;
-            font-size: 12px;
-        }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            font-size: 18px;
-            color: #666;
+        .error {
+            color: #d32f2f;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <h1>Buscador de Imágenes Danbooru</h1>
+    <h1>Buscador de Personajes en Danbooru</h1>
     
     <div class="search-container">
-        <input type="text" id="searchInput" placeholder="Buscar imágenes (ej. 'hatsune_miku', 'saber', etc.)">
-        <button onclick="searchImages()">Buscar</button>
+        <input type="text" id="seriesInput" placeholder="Ingresa el nombre de la serie (ej: 'fate stay night')">
+        <button onclick="searchCharacters()">Buscar Personajes</button>
     </div>
     
-    <div id="loading" class="loading" style="display: none;">Cargando resultados...</div>
-    
-    <div id="resultsContainer" class="results"></div>
-    
+    <div class="results" id="resultsContainer" style="display: none;">
+        <h2>Resultados en JSON:</h2>
+        <pre id="jsonResults"></pre>
+    </div>
+
     <script>
-        async function searchImages() {
-            const searchTerm = document.getElementById('searchInput').value.trim();
-            if (!searchTerm) {
-                alert('Por favor ingresa un término de búsqueda');
+        async function searchCharacters() {
+            const seriesName = document.getElementById('seriesInput').value.trim();
+            const resultsContainer = document.getElementById('resultsContainer');
+            const jsonResults = document.getElementById('jsonResults');
+            
+            if (!seriesName) {
+                alert('Por favor ingresa el nombre de una serie');
                 return;
             }
             
-            const loadingElement = document.getElementById('loading');
-            const resultsContainer = document.getElementById('resultsContainer');
-            
-            // Mostrar carga y limpiar resultados anteriores
-            loadingElement.style.display = 'block';
-            resultsContainer.innerHTML = '';
-            
             try {
-                // Hacer la petición a la API de Danbooru
-                const response = await fetch(`https://danbooru.donmai.us/posts.json?tags=${encodeURIComponent(searchTerm)}&limit=20`);
+                // Primero buscamos la serie para obtener su ID
+                const seriesSearchUrl = `https://danbooru.donmai.us/tags.json?search[name_matches]=${encodeURIComponent(seriesName)}&search[category]=series`;
+                const seriesResponse = await fetch(seriesSearchUrl);
                 
-                if (!response.ok) {
-                    throw new Error(`Error en la petición: ${response.status}`);
+                if (!seriesResponse.ok) {
+                    throw new Error(`Error HTTP: ${seriesResponse.status}`);
                 }
                 
-                const posts = await response.json();
+                const seriesData = await seriesResponse.json();
                 
-                if (posts.length === 0) {
-                    resultsContainer.innerHTML = '<p>No se encontraron resultados para tu búsqueda.</p>';
+                if (seriesData.length === 0) {
+                    jsonResults.textContent = 'No se encontró la serie especificada.';
+                    resultsContainer.style.display = 'block';
                     return;
                 }
                 
-                // Procesar y mostrar los resultados
-                posts.forEach(post => {
-                    if (!post.file_url) return; // Saltar posts sin imagen
-                    
-                    const imageCard = document.createElement('div');
-                    imageCard.className = 'image-card';
-                    
-                    // Extraer información de la serie y personajes de los tags
-                    const copyrightTags = post.tag_string_copyright ? post.tag_string_copyright.split(' ') : [];
-                    const characterTags = post.tag_string_character ? post.tag_string_character.split(' ') : [];
-                    
-                    imageCard.innerHTML = `
-                        <img src="${post.file_url}" alt="${post.tag_string_general || 'imagen'}">
-                        <div class="image-info">
-                            <div class="series-info">
-                                <strong>Series:</strong><br>
-                                ${copyrightTags.length > 0 ? 
-                                    copyrightTags.map(tag => `<span class="tag">${tag}</span>`).join(' ') : 
-                                    'Desconocido'}
-                            </div>
-                            <div class="characters-info">
-                                <strong>Personajes:</strong><br>
-                                ${characterTags.length > 0 ? 
-                                    characterTags.map(tag => `<span class="tag">${tag}</span>`).join(' ') : 
-                                    'Desconocido'}
-                            </div>
-                            <p><a href="https://danbooru.donmai.us/posts/${post.id}" target="_blank">Ver en Danbooru</a></p>
-                        </div>
-                    `;
-                    
-                    resultsContainer.appendChild(imageCard);
-                });
+                const seriesId = seriesData[0].id;
+                
+                // Ahora buscamos personajes de esa serie
+                const charactersUrl = `https://danbooru.donmai.us/tags.json?search[category]=character&search[parent_id]=${seriesId}&limit=20`;
+                const charactersResponse = await fetch(charactersUrl);
+                
+                if (!charactersResponse.ok) {
+                    throw new Error(`Error HTTP: ${charactersResponse.status}`);
+                }
+                
+                const charactersData = await charactersResponse.json();
+                
+                if (charactersData.length === 0) {
+                    jsonResults.textContent = 'No se encontraron personajes para esta serie.';
+                    resultsContainer.style.display = 'block';
+                    return;
+                }
+                
+                // Procesamos los resultados
+                const processedResults = charactersData.map(character => ({
+                    nombre_completo: character.name,
+                    valor: character.post_count,
+                    genero: getGenderFromName(character.name),
+                    serie: seriesData[0].name
+                }));
+                
+                // Mostramos los resultados formateados en JSON
+                jsonResults.textContent = JSON.stringify(processedResults, null, 2);
+                resultsContainer.style.display = 'block';
                 
             } catch (error) {
-                console.error('Error al buscar imágenes:', error);
-                resultsContainer.innerHTML = `<p>Ocurrió un error al buscar imágenes: ${error.message}</p>`;
-            } finally {
-                loadingElement.style.display = 'none';
+                jsonResults.textContent = `Error: ${error.message}`;
+                resultsContainer.style.display = 'block';
+                console.error('Error:', error);
             }
         }
         
-        // Permitir búsqueda al presionar Enter
-        document.getElementById('searchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchImages();
+        // Función auxiliar para intentar determinar el género del personaje
+        function getGenderFromName(name) {
+            const lowerName = name.toLowerCase();
+            
+            // Algunas convenciones comunes en los nombres de personajes
+            if (lowerName.includes('female') || lowerName.includes('girl') || 
+                lowerName.includes('woman') || lowerName.includes('_f_') || 
+                lowerName.endsWith('_(female)')) {
+                return 'Femenino';
+            } else if (lowerName.includes('male') || lowerName.includes('boy') || 
+                      lowerName.includes('man') || lowerName.includes('_m_') || 
+                      lowerName.endsWith('_(male)')) {
+                return 'Masculino';
+            } else {
+                return 'Desconocido';
             }
-        });
+        }
     </script>
 </body>
 </html>
