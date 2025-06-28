@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador de Personajes de Anime</title>
+    <title>Buscador de Personajes - Danbooru</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -17,219 +17,130 @@
             text-align: center;
         }
         .search-container {
-            display: flex;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        #search-input {
-            flex: 1;
+        input, button {
             padding: 10px;
             font-size: 16px;
-            border: 1px solid #ddd;
-            border-radius: 4px 0 0 4px;
         }
-        #search-button {
-            padding: 10px 20px;
+        input {
+            width: 70%;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
             background-color: #4CAF50;
             color: white;
             border: none;
-            border-radius: 0 4px 4px 0;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
         }
-        #search-button:hover {
+        button:hover {
             background-color: #45a049;
         }
-        #results {
-            margin-top: 20px;
-        }
-        .character-card {
+        .results {
             background-color: white;
-            border-radius: 4px;
-            padding: 15px;
-            margin-bottom: 10px;
+            padding: 20px;
+            border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .character-name {
-            font-weight: bold;
-            font-size: 18px;
-            margin-bottom: 5px;
-        }
-        .character-info {
-            color: #666;
-            margin-bottom: 3px;
-        }
-        #json-output {
+        pre {
             background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .character-card {
             border: 1px solid #ddd;
             border-radius: 4px;
-            padding: 15px;
-            margin-top: 20px;
-            white-space: pre-wrap;
-            font-family: monospace;
-        }
-        .loading {
-            text-align: center;
-            margin: 20px 0;
-            display: none;
+            padding: 10px;
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>Buscador de Personajes de Anime</h1>
+    <h1>Buscador de Personajes - Danbooru</h1>
     
     <div class="search-container">
-        <input type="text" id="search-input" placeholder="Buscar personajes por serie..." autocomplete="off">
-        <button id="search-button">Buscar</button>
+        <input type="text" id="searchInput" placeholder="Ingresa el nombre de la serie (ej: 'fate stay night')">
+        <button onclick="searchCharacters()">Buscar</button>
     </div>
     
-    <div class="loading" id="loading">
-        <p>Cargando resultados...</p>
+    <div class="results" id="results">
+        <p>Los resultados aparecerán aquí...</p>
     </div>
-    
-    <div id="results"></div>
-    
-    <h2>Respuesta JSON</h2>
-    <div id="json-output">Los resultados aparecerán aquí en formato JSON</div>
-    
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInput = document.getElementById('search-input');
-            const searchButton = document.getElementById('search-button');
+        async function searchCharacters() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            if (!searchTerm) {
+                alert('Por favor ingresa un término de búsqueda');
+                return;
+            }
+
             const resultsDiv = document.getElementById('results');
-            const jsonOutput = document.getElementById('json-output');
-            const loadingDiv = document.getElementById('loading');
-            
-            searchButton.addEventListener('click', searchCharacters);
-            searchInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    searchCharacters();
-                }
-            });
-            
-            async function searchCharacters() {
-                const query = searchInput.value.trim();
-                if (!query) return;
+            resultsDiv.innerHTML = '<p>Buscando personajes...</p>';
+
+            try {
+                // Usamos el proxy de Danbooru para evitar problemas CORS
+                const response = await fetch(`https://danbooru.donmai.us/autocomplete.json?search[type]=tag_query&search[query]=${encodeURIComponent(searchTerm)}&limit=20`);
                 
-                resultsDiv.innerHTML = '';
-                jsonOutput.textContent = 'Buscando...';
-                loadingDiv.style.display = 'block';
-                
-                try {
-                    // Primero buscamos tags que coincidan con el nombre de la serie
-                    const seriesTags = await fetchDanbooruTags(query, 'copyright');
-                    
-                    if (seriesTags.length === 0) {
-                        resultsDiv.innerHTML = '<p>No se encontraron series que coincidan con tu búsqueda.</p>';
-                        jsonOutput.textContent = '[]';
-                        return;
-                    }
-                    
-                    // Tomamos la primera coincidencia (podrías agregar un selector para elegir entre múltiples coincidencias)
-                    const seriesTag = seriesTags[0];
-                    
-                    // Ahora buscamos personajes de esa serie
-                    const characterTags = await fetchDanbooruTags(seriesTag.name, 'character');
-                    
-                    // Procesamos los resultados
-                    const characters = characterTags.map(tag => {
-                        return {
-                            nombre_completo: tag.name,
-                            valor: tag.post_count,
-                            url: `https://danbooru.donmai.us/wiki_pages/${tag.name.replace(/\s+/g, '_')}`,
-                            genero: getGenderFromTag(tag.name, tag.category),
-                            serie: seriesTag.name
-                        };
-                    });
-                    
-                    // Mostramos los resultados
-                    displayResults(characters);
-                    
-                    // Mostramos el JSON
-                    jsonOutput.textContent = JSON.stringify(characters, null, 2);
-                    
-                } catch (error) {
-                    console.error('Error:', error);
-                    resultsDiv.innerHTML = '<p>Ocurrió un error al buscar los personajes.</p>';
-                    jsonOutput.textContent = `{"error": "${error.message}"}`;
-                } finally {
-                    loadingDiv.style.display = 'none';
-                }
-            }
-            
-            async function fetchDanbooruTags(searchTerm, category) {
-                // La API de Danbooru tiene límites, considera usar un proxy si necesitas
-                const url = `https://danbooru.donmai.us/tags.json?search[name_matches]=${encodeURIComponent(searchTerm)}*&search[category]=${category}&limit=20`;
-                
-                const response = await fetch(url);
                 if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
-                }
-                return await response.json();
-            }
-            
-            function getGenderFromTag(name, category) {
-                // Danbooru tiene categorías de género en algunos tags
-                if (category === 4) return 'femenino';
-                if (category === 5) return 'masculino';
-                
-                // Intento deducir el género del nombre (esto es muy básico)
-                const femaleKeywords = ['_female', '_girl', '_woman', '_lady', '-chan', '-ko'];
-                const maleKeywords = ['_male', '_boy', '_man', '_guy', '-kun', '-shi'];
-                
-                for (const keyword of femaleKeywords) {
-                    if (name.includes(keyword)) return 'femenino';
+                    throw new Error('Error al buscar personajes');
                 }
                 
-                for (const keyword of maleKeywords) {
-                    if (name.includes(keyword)) return 'masculino';
-                }
+                const data = await response.json();
                 
-                return 'desconocido';
-            }
-            
-            function displayResults(characters) {
-                resultsDiv.innerHTML = '';
-                
-                if (characters.length === 0) {
+                if (data.length === 0) {
                     resultsDiv.innerHTML = '<p>No se encontraron personajes para esta serie.</p>';
                     return;
                 }
                 
-                characters.forEach(character => {
-                    const card = document.createElement('div');
-                    card.className = 'character-card';
+                // Procesamos los resultados para obtener la información deseada
+                const characters = data.map(item => {
+                    return {
+                        nombre_completo: item.value,
+                        valor: item.post_count,
+                        url: `https://danbooru.donmai.us/wiki_pages/${encodeURIComponent(item.value)}`,
+                        genero: item.category === 'character' ? (item.value.toLowerCase().includes('female') ? 'Femenino' : 
+                              item.value.toLowerCase().includes('male') ? 'Masculino' : 'Desconocido') : 'No aplica',
+                        serie: searchTerm
+                    };
+                }).filter(item => item.genero !== 'No aplica');
+                
+                // Mostramos los resultados en JSON y en tarjetas
+                resultsDiv.innerHTML = `
+                    <h2>Resultados para: ${searchTerm}</h2>
+                    <h3>Formato JSON:</h3>
+                    <pre>${JSON.stringify(characters, null, 2)}</pre>
                     
-                    const name = document.createElement('div');
-                    name.className = 'character-name';
-                    name.textContent = character.nombre_completo.replace(/_/g, ' ');
-                    
-                    const series = document.createElement('div');
-                    series.className = 'character-info';
-                    series.textContent = `Serie: ${character.serie.replace(/_/g, ' ')}`;
-                    
-                    const count = document.createElement('div');
-                    count.className = 'character-info';
-                    count.textContent = `Posts: ${character.valor}`;
-                    
-                    const gender = document.createElement('div');
-                    gender.className = 'character-info';
-                    gender.textContent = `Género: ${character.genero}`;
-                    
-                    const link = document.createElement('a');
-                    link.href = character.url;
-                    link.textContent = 'Ver en Danbooru';
-                    link.target = '_blank';
-                    link.style.display = 'block';
-                    link.style.marginTop = '10px';
-                    
-                    card.appendChild(name);
-                    card.appendChild(series);
-                    card.appendChild(count);
-                    card.appendChild(gender);
-                    card.appendChild(link);
-                    
-                    resultsDiv.appendChild(card);
-                });
+                    <h3>Vista de tarjetas:</h3>
+                    ${characters.map(character => `
+                        <div class="character-card">
+                            <h4>${character.nombre_completo}</h4>
+                            <p><strong>Serie:</strong> ${character.serie}</p>
+                            <p><strong>Género:</strong> ${character.genero}</p>
+                            <p><strong>Posts:</strong> ${character.valor}</p>
+                            <p><a href="${character.url}" target="_blank">Ver en Danbooru</a></p>
+                        </div>
+                    `).join('')}
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        }
+        
+        // Permitir búsqueda al presionar Enter
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchCharacters();
             }
         });
     </script>
