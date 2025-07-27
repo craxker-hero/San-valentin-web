@@ -95,16 +95,9 @@
             border-left: 4px solid #3498db;
         }
         .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: #3498db;
-            animation: spin 1s ease-in-out infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+            text-align: center;
+            padding: 20px;
+            color: #3498db;
         }
     </style>
 </head>
@@ -113,12 +106,13 @@
         <h1>Buscador Real de Personajes en Gelbooru</h1>
         
         <div class="instructions">
-            <p>Ingresa el nombre de una serie para buscar sus personajes en Gelbooru. Ejemplo: <em>Dragon Ball</em>, <em>Evangelion</em>, <em>One Piece</em></p>
+            <p>Ingresa el nombre de una serie para buscar sus personajes. Ejemplo: <em>dragon_ball</em>, <em>zenless_zone_zero</em>, <em>naruto</em></p>
+            <p><strong>Nota:</strong> Usa guiones bajos (_) en lugar de espacios para mejores resultados.</p>
         </div>
         
         <div class="search-box">
-            <input type="text" id="seriesName" placeholder="Ej: Zenless Zone Zero, Naruto, Attack on Titan...">
-            <button onclick="searchSeries()" id="searchButton">Buscar</button>
+            <input type="text" id="seriesName" placeholder="Ej: dragon_ball, evangelion, one_piece">
+            <button onclick="searchCharacters()">Buscar Personajes</button>
         </div>
         
         <div id="results" class="results">
@@ -127,128 +121,80 @@
     </div>
 
     <script>
-        async function searchSeries() {
+        async function searchCharacters() {
             const seriesName = document.getElementById('seriesName').value.trim();
             const resultsDiv = document.getElementById('results');
-            const searchButton = document.getElementById('searchButton');
             
             if (!seriesName) {
                 resultsDiv.innerHTML = `<div class="no-results">Por favor ingresa un nombre de serie</div>`;
                 return;
             }
             
-            // Mostrar estado de carga
-            searchButton.innerHTML = `<div class="loading"></div> Buscando...`;
-            resultsDiv.innerHTML = '';
+            resultsDiv.innerHTML = '<div class="loading">Buscando personajes... Esto puede tomar unos segundos.</div>';
             
             try {
-                // Primero buscamos tags relacionados con el nombre de la serie
-                const seriesTags = await fetchSeriesTags(seriesName);
+                // Primero buscamos los tags relacionados con la serie
+                const tagsResponse = await fetch(`https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1&name_pattern=${seriesName}_`);
+                const tagsData = await tagsResponse.json();
                 
-                if (seriesTags.length === 0) {
-                    resultsDiv.innerHTML = `<div class="no-results">No se encontraron tags para "${seriesName}"</div>`;
+                if (!tagsData.tag || tagsData.tag.length === 0) {
+                    resultsDiv.innerHTML = `<div class="no-results">No se encontraron tags para "${seriesName}". Prueba con otro nombre.</div>`;
                     return;
                 }
                 
-                // Luego buscamos personajes de esa serie
-                const characters = await fetchCharactersFromSeries(seriesTags[0].tag);
-                displayResults(characters, seriesTags[0].tag);
+                // Filtramos solo los tags que parecen ser personajes (contienen paréntesis)
+                const characterTags = tagsData.tag.filter(tag => 
+                    tag.name.includes('(') && tag.name.includes(')') && 
+                    tag.name.startsWith(seriesName)
+                );
+                
+                if (characterTags.length === 0) {
+                    resultsDiv.innerHTML = `<div class="no-results">No se encontraron personajes para "${seriesName}".</div>`;
+                    return;
+                }
+                
+                // Ordenamos por popularidad (count)
+                characterTags.sort((a, b) => b.count - a.count);
+                
+                // Limitar a los 10 personajes más populares
+                const topCharacters = characterTags.slice(0, 10);
+                
+                // Procesamos los resultados al formato requerido
+                const charactersData = topCharacters.map(tag => {
+                    // Extraemos el nombre del personaje del tag (lo que está dentro de paréntesis)
+                    const characterName = tag.name.match(/\((.*?)\)/)[1].replace(/_/g, ' ');
+                    // Determinamos género basado en convenciones comunes
+                    let gender = "Desconocido";
+                    if (tag.name.includes('female') || tag.name.includes('girl')) gender = "Mujer";
+                    if (tag.name.includes('male') || tag.name.includes('boy')) gender = "Hombre";
+                    
+                    return {
+                        "name": characterName,
+                        "value": tag.count,
+                        "gender": gender,
+                        "source": seriesName.replace(/_/g, ' '),
+                        "keyword": tag.name
+                    };
+                });
+                
+                displayResults(charactersData);
             } catch (error) {
                 console.error('Error:', error);
                 resultsDiv.innerHTML = `
                     <div class="no-results">
-                        Error al buscar la serie. Puedes intentar directamente en 
-                        <a href="https://gelbooru.com/index.php?page=post&s=list&tags=${encodeURIComponent(seriesName)}" target="_blank">
-                            Gelbooru
-                        </a>
-                    </div>
-                    <div class="no-results">
-                        Nota: Esta búsqueda puede fallar debido a restricciones CORS. Para un funcionamiento completo, 
-                        necesitarías implementar un backend proxy.
+                        Error al buscar los personajes. Posibles causas:<br><br>
+                        1. Gelbooru puede estar bloqueando la solicitud (problema de CORS).<br>
+                        2. La API de Gelbooru puede haber cambiado.<br>
+                        3. Problema de conexión a internet.<br><br>
+                        Intenta recargar la página o usa un navegador diferente.
                     </div>
                 `;
-            } finally {
-                searchButton.textContent = 'Buscar';
             }
         }
 
-        async function fetchSeriesTags(seriesName) {
-            // Esta URL puede necesitar ajustes según la API de Gelbooru
-            const url = `https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1&name_pattern=${encodeURIComponent(seriesName)}%25`;
-            
-            try {
-                // Nota: Esto fallará por CORS sin un proxy
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Error en la respuesta');
-                const data = await response.json();
-                return data.tag || [];
-            } catch (error) {
-                // Simulación cuando falla por CORS (solo para demostración)
-                return simulateTagsResponse(seriesName);
-            }
-        }
-
-        async function fetchCharactersFromSeries(seriesTag) {
-            // Buscar tags que sean personajes de la serie (generalmente tienen el formato "character_name (series)")
-            const url = `https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1&name_pattern=character%25(${encodeURIComponent(seriesTag)})`;
-            
-            try {
-                // Nota: Esto fallará por CORS sin un proxy
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Error en la respuesta');
-                const data = await response.json();
-                return processCharacterTags(data.tag || [], seriesTag);
-            } catch (error) {
-                // Simulación cuando falla por CORS (solo para demostración)
-                return simulateCharacterResponse(seriesTag);
-            }
-        }
-
-        function processCharacterTags(tags, seriesTag) {
-            return tags.map(tag => {
-                // Extraer el nombre del personaje del tag (ej: "goku (dragon ball)" -> "goku")
-                const characterName = tag.tag.split(' (')[0].replace(/_/g, ' ');
-                const prettyName = characterName.split('_').map(word => 
-                    word.charAt(0).toUpperCase() + word.slice(1)
-                ).join(' ');
-                
-                return {
-                    "name": prettyName,
-                    "value": tag.count,
-                    "gender": guessGender(tag.tag),
-                    "source": seriesTag.replace(/_/g, ' '),
-                    "keyword": tag.tag
-                };
-            }).sort((a, b) => b.value - a.value); // Ordenar por popularidad
-        }
-
-        function guessGender(tag) {
-            // Intento básico de adivinar el género basado en tags comunes
-            if (tag.includes('female') || tag.includes('girl') || tag.includes('sister')) {
-                return "Mujer";
-            } else if (tag.includes('male') || tag.includes('boy') || tag.includes('brother')) {
-                return "Hombre";
-            }
-            return "Desconocido";
-        }
-
-        function displayResults(characters, seriesTag) {
+        function displayResults(characters) {
             const resultsDiv = document.getElementById('results');
-            
-            if (characters.length === 0) {
-                resultsDiv.innerHTML = `
-                    <div class="no-results">
-                        No se encontraron personajes para "${seriesTag.replace(/_/g, ' ')}". 
-                        Puedes intentar directamente en 
-                        <a href="https://gelbooru.com/index.php?page=post&s=list&tags=${encodeURIComponent(seriesTag)}" target="_blank">
-                            Gelbooru
-                        </a>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = `<h3>Personajes encontrados para "${seriesTag.replace(/_/g, ' ')}":</h3>`;
+            let html = '<h3>Personajes encontrados:</h3>';
             
             characters.forEach(character => {
                 html += `
@@ -272,52 +218,6 @@
             });
             
             resultsDiv.innerHTML = html;
-        }
-
-        // Funciones de simulación (solo se usan cuando falla la API por CORS)
-        function simulateTagsResponse(seriesName) {
-            const simulatedSeries = {
-                "dragon ball": [{tag: "dragon_ball", count: 50000}],
-                "evangelion": [{tag: "neon_genesis_evangelion", count: 30000}],
-                "one piece": [{tag: "one_piece", count: 40000}],
-                "zenless zone zero": [{tag: "zenless_zone_zero", count: 10000}],
-                "naruto": [{tag: "naruto", count: 35000}]
-            };
-            
-            const key = seriesName.toLowerCase();
-            return simulatedSeries[key] || [];
-        }
-
-        function simulateCharacterResponse(seriesTag) {
-            const simulatedCharacters = {
-                "dragon_ball": [
-                    {tag: "goku_(dragon_ball)", count: 18276},
-                    {tag: "vegeta_(dragon_ball)", count: 9876},
-                    {tag: "bulma_(dragon_ball)", count: 7654}
-                ],
-                "neon_genesis_evangelion": [
-                    {tag: "asuka_langley", count: 12000},
-                    {tag: "rei_ayanami", count: 11000},
-                    {tag: "shinji_ikari", count: 8000}
-                ],
-                "one_piece": [
-                    {tag: "monkey_d._luffy", count: 15321},
-                    {tag: "nami_(one_piece)", count: 12000},
-                    {tag: "roronoa_zoro", count: 11000}
-                ],
-                "zenless_zone_zero": [
-                    {tag: "ellen_joe_(zenless_zone_zero)", count: 12345},
-                    {tag: "billy_(zenless_zone_zero)", count: 5678},
-                    {tag: "nicole_(zenless_zone_zero)", count: 4321}
-                ],
-                "naruto": [
-                    {tag: "naruto_uzumaki", count: 20000},
-                    {tag: "sasuke_uchiha", count: 18000},
-                    {tag: "sakura_haruno", count: 15000}
-                ]
-            };
-            
-            return processCharacterTags(simulatedCharacters[seriesTag] || [], seriesTag);
         }
     </script>
 </body>
