@@ -99,28 +99,73 @@
             padding: 20px;
             color: #3498db;
         }
+        .cors-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+        }
     </style>
 </head>
 <body>
     <div class="search-container">
         <h1>Buscador Real de Personajes en Gelbooru</h1>
         
+        <div class="cors-warning">
+            <strong>⚠️ Importante:</strong> Para que este buscador funcione, necesitas instalar la extensión 
+            <a href="https://chrome.google.com/webstore/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino" target="_blank">CORS Unblock</a> 
+            o similar en tu navegador.
+        </div>
+        
         <div class="instructions">
-            <p>Ingresa el nombre de una serie para buscar sus personajes. Ejemplo: <em>dragon_ball</em>, <em>zenless_zone_zero</em>, <em>naruto</em></p>
-            <p><strong>Nota:</strong> Usa guiones bajos (_) en lugar de espacios para mejores resultados.</p>
+            <p><strong>Instrucciones de búsqueda:</strong></p>
+            <ol>
+                <li>Instala la extensión CORS Unblock</li>
+                <li>Activa la extensión (icono en la barra de herramientas)</li>
+                <li>Ingresa el nombre de la serie con guiones bajos (_) en lugar de espacios</li>
+                <li>Ejemplos: <code>dragon_ball</code>, <code>fate_stay_night</code>, <code>zenless_zone_zero</code></li>
+            </ol>
         </div>
         
         <div class="search-box">
-            <input type="text" id="seriesName" placeholder="Ej: dragon_ball, evangelion, one_piece">
+            <input type="text" id="seriesName" placeholder="Ej: naruto, one_piece, evangelion">
             <button onclick="searchCharacters()">Buscar Personajes</button>
         </div>
         
         <div id="results" class="results">
-            <!-- Los resultados se mostrarán aquí -->
+            <p>Ingresa un nombre de serie y haz clic en Buscar. Los resultados aparecerán aquí.</p>
         </div>
     </div>
 
     <script>
+        // Función para hacer peticiones con manejo de errores CORS
+        async function fetchWithCORS(url) {
+            try {
+                // Intentamos con el modo 'cors' primero
+                const response = await fetch(url, {
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.log('Falló el modo CORS, intentando sin él...', error);
+                // Si falla, intentamos sin especificar el modo
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return await response.json();
+                } catch (e) {
+                    throw new Error(`No se pudo completar la solicitud. Asegúrate de tener la extensión CORS Unblock activada. Error: ${e.message}`);
+                }
+            }
+        }
+
         async function searchCharacters() {
             const seriesName = document.getElementById('seriesName').value.trim();
             const resultsDiv = document.getElementById('results');
@@ -134,8 +179,8 @@
             
             try {
                 // Primero buscamos los tags relacionados con la serie
-                const tagsResponse = await fetch(`https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1&name_pattern=${seriesName}_`);
-                const tagsData = await tagsResponse.json();
+                const tagsUrl = `https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1&name_pattern=${seriesName}_`;
+                const tagsData = await fetchWithCORS(tagsUrl);
                 
                 if (!tagsData.tag || tagsData.tag.length === 0) {
                     resultsDiv.innerHTML = `<div class="no-results">No se encontraron tags para "${seriesName}". Prueba con otro nombre.</div>`;
@@ -144,29 +189,53 @@
                 
                 // Filtramos solo los tags que parecen ser personajes (contienen paréntesis)
                 const characterTags = tagsData.tag.filter(tag => 
-                    tag.name.includes('(') && tag.name.includes(')') && 
-                    tag.name.startsWith(seriesName)
+                    tag.name.includes('(') && 
+                    tag.name.includes(')') && 
+                    tag.name.startsWith(seriesName + "_") &&
+                    !tag.name.includes('copyright') &&
+                    !tag.name.includes('character_set')
                 );
                 
                 if (characterTags.length === 0) {
-                    resultsDiv.innerHTML = `<div class="no-results">No se encontraron personajes para "${seriesName}".</div>`;
+                    resultsDiv.innerHTML = `
+                        <div class="no-results">
+                            No se encontraron personajes para "${seriesName}".<br><br>
+                            Prueba con estos formatos:<br>
+                            - Usa guiones bajos (_) en lugar de espacios<br>
+                            - Ejemplos: <code>dragon_ball</code>, <code>fate_stay_night</code>
+                        </div>
+                    `;
                     return;
                 }
                 
                 // Ordenamos por popularidad (count)
                 characterTags.sort((a, b) => b.count - a.count);
                 
-                // Limitar a los 10 personajes más populares
-                const topCharacters = characterTags.slice(0, 10);
+                // Limitar a los primeros 15 personajes
+                const topCharacters = characterTags.slice(0, 15);
                 
                 // Procesamos los resultados al formato requerido
-                const charactersData = topCharacters.map(tag => {
+                const charactersData = await Promise.all(topCharacters.map(async tag => {
                     // Extraemos el nombre del personaje del tag (lo que está dentro de paréntesis)
-                    const characterName = tag.name.match(/\((.*?)\)/)[1].replace(/_/g, ' ');
-                    // Determinamos género basado en convenciones comunes
+                    const characterNameMatch = tag.name.match(/\((.*?)\)/);
+                    const characterName = characterNameMatch ? 
+                        characterNameMatch[1].replace(/_/g, ' ') : 
+                        tag.name.replace(seriesName + '_', '').replace(/_/g, ' ');
+                    
+                    // Determinamos género basado en tags adicionales
                     let gender = "Desconocido";
-                    if (tag.name.includes('female') || tag.name.includes('girl')) gender = "Mujer";
-                    if (tag.name.includes('male') || tag.name.includes('boy')) gender = "Hombre";
+                    try {
+                        const tagInfoUrl = `https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1&name=${tag.name}`;
+                        const tagInfo = await fetchWithCORS(tagInfoUrl);
+                        
+                        if (tagInfo.tag && tagInfo.tag[0]) {
+                            const tagType = tagInfo.tag[0].type;
+                            if (tagType === 1) gender = "Mujer";
+                            if (tagType === 4) gender = "Hombre";
+                        }
+                    } catch (e) {
+                        console.log("No se pudo determinar el género:", e);
+                    }
                     
                     return {
                         "name": characterName,
@@ -175,18 +244,19 @@
                         "source": seriesName.replace(/_/g, ' '),
                         "keyword": tag.name
                     };
-                });
+                }));
                 
                 displayResults(charactersData);
             } catch (error) {
                 console.error('Error:', error);
                 resultsDiv.innerHTML = `
                     <div class="no-results">
-                        Error al buscar los personajes. Posibles causas:<br><br>
-                        1. Gelbooru puede estar bloqueando la solicitud (problema de CORS).<br>
-                        2. La API de Gelbooru puede haber cambiado.<br>
-                        3. Problema de conexión a internet.<br><br>
-                        Intenta recargar la página o usa un navegador diferente.
+                        <strong>Error al buscar los personajes:</strong><br><br>
+                        ${error.message}<br><br>
+                        Asegúrate de:<br>
+                        1. Tener instalada y activada la extensión CORS Unblock<br>
+                        2. Usar el formato correcto (ej: <code>dragon_ball</code>)<br>
+                        3. Que el nombre de la serie exista en Gelbooru
                     </div>
                 `;
             }
@@ -194,7 +264,13 @@
 
         function displayResults(characters) {
             const resultsDiv = document.getElementById('results');
-            let html = '<h3>Personajes encontrados:</h3>';
+            
+            if (characters.length === 0) {
+                resultsDiv.innerHTML = `<div class="no-results">No se encontraron personajes con el formato requerido.</div>`;
+                return;
+            }
+            
+            let html = `<h3>${characters.length} personajes encontrados para "${characters[0].source}":</h3>`;
             
             characters.forEach(character => {
                 html += `
