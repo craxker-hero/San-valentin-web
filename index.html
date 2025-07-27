@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador Real de Personajes - Gelbooru</title>
+    <title>Buscador de Series en Gelbooru</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -111,15 +111,15 @@
 </head>
 <body>
     <div class="search-container">
-        <h1>Buscador Real de Personajes en Gelbooru</h1>
+        <h1>Buscador de Series en Gelbooru</h1>
         
         <div class="instructions">
-            <p>Ingresa el nombre de una serie para buscar sus personajes. Ejemplo: <em>Dragon Ball</em>, <em>Naruto</em>, <em>Evangelion</em></p>
+            <p>Ingresa el nombre de una serie para buscar sus tags en Gelbooru. Ejemplo: <em>Dragon Ball</em>, <em>Naruto</em>, <em>One Piece</em></p>
         </div>
         
         <div class="search-box">
-            <input type="text" id="seriesName" placeholder="Ej: Zenless Zone Zero, One Piece, Demon Slayer...">
-            <button onclick="searchCharacters()" id="searchButton">Buscar</button>
+            <input type="text" id="seriesName" placeholder="Ej: Attack on Titan, Jujutsu Kaisen...">
+            <button onclick="searchSeries()" id="searchButton">Buscar</button>
         </div>
         
         <div id="results" class="results">
@@ -129,7 +129,7 @@
 
     <script>
         // Función principal de búsqueda
-        async function searchCharacters() {
+        async function searchSeries() {
             const seriesName = document.getElementById('seriesName').value.trim();
             const resultsDiv = document.getElementById('results');
             const searchButton = document.getElementById('searchButton');
@@ -142,13 +142,13 @@
             // Mostrar estado de carga
             searchButton.disabled = true;
             searchButton.innerHTML = `<span class="loading"></span>Buscando...`;
-            resultsDiv.innerHTML = `<div style="text-align: center;"><span class="loading"></span>Buscando personajes de "${seriesName}" en Gelbooru...</div>`;
+            resultsDiv.innerHTML = `<div style="text-align: center;"><span class="loading"></span>Buscando "${seriesName}" en Gelbooru...</div>`;
             
             try {
-                // Paso 1: Buscar tags relacionados con la serie
-                const seriesTags = await fetchSeriesTags(seriesName);
+                // Buscar tags relacionados con la serie
+                const tags = await fetchSeriesTags(seriesName);
                 
-                if (seriesTags.length === 0) {
+                if (tags.length === 0) {
                     resultsDiv.innerHTML = `
                         <div class="no-results">
                             No se encontraron tags para "${seriesName}". Prueba con otro nombre.
@@ -157,20 +157,8 @@
                     return;
                 }
                 
-                // Paso 2: Buscar personajes (tags de tipo character) relacionados con la serie
-                const characters = await fetchCharactersFromSeries(seriesTags);
-                
-                if (characters.length === 0) {
-                    resultsDiv.innerHTML = `
-                        <div class="no-results">
-                            No se encontraron personajes para "${seriesName}". La serie puede no estar bien etiquetada.
-                        </div>
-                    `;
-                    return;
-                }
-                
                 // Mostrar resultados
-                displayResults(characters, seriesName);
+                displayResults(tags, seriesName);
                 
             } catch (error) {
                 console.error("Error:", error);
@@ -199,77 +187,66 @@
             return data.tag || [];
         }
         
-        // Buscar personajes relacionados con los tags de la serie
-        async function fetchCharactersFromSeries(seriesTags) {
-            const characters = [];
+        // Mostrar los resultados en el formato JSON especificado
+        function displayResults(tags, seriesName) {
+            const resultsDiv = document.getElementById('results');
+            let html = `<h3>Tags para "${seriesName}" encontrados:</h3>`;
             
-            // Tomamos los primeros 3 tags de serie para no hacer demasiadas peticiones
-            const mainSeriesTags = seriesTags.slice(0, 3);
+            // Filtrar y ordenar los tags más relevantes
+            const filteredTags = tags
+                .filter(tag => tag.count > 10) // Ignorar tags con muy pocos posts
+                .sort((a, b) => b.count - a.count) // Ordenar por popularidad
+                .slice(0, 10); // Limitar a 10 resultados
             
-            for (const seriesTag of mainSeriesTags) {
-                const encodedTag = encodeURIComponent(seriesTag.name);
-                const response = await fetch(`https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1&name_pattern=%25&type=character&orderby=count&limit=20&before_id=0&related=${encodedTag}`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.tag) {
-                        characters.push(...data.tag.map(tag => ({
-                            name: tag.name.replace(/_/g, ' '),
-                            value: tag.count,
-                            keyword: tag.name,
-                            source: seriesTag.name.replace(/_/g, ' ')
-                        })));
-                    }
-                }
+            if (filteredTags.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="no-results">
+                        No se encontraron tags relevantes para "${seriesName}".
+                    </div>
+                `;
+                return;
             }
             
-            // Eliminar duplicados y ordenar por popularidad
-            return characters
-                .filter((char, index, self) => 
-                    index === self.findIndex(c => c.keyword === char.keyword)
-                )
-                .sort((a, b) => b.value - a.value);
-        }
-        
-        // Mostrar los resultados en el formato JSON especificado
-        function displayResults(characters, seriesName) {
-            const resultsDiv = document.getElementById('results');
-            let html = `<h3>Personajes de "${seriesName}" encontrados:</h3>`;
-            
-            characters.forEach(character => {
-                // Determinar género basado en tags comunes (simplificado)
-                let gender = "Desconocido";
-                const lowerName = character.name.toLowerCase();
-                
-                if (lowerName.includes("female") || lowerName.includes("girl") || 
-                    lowerName.includes("woman") || lowerName.includes("_f")) {
-                    gender = "Mujer";
-                } else if (lowerName.includes("male") || lowerName.includes("boy") || 
-                          lowerName.includes("man") || lowerName.includes("_m")) {
-                    gender = "Hombre";
-                }
-                
+            filteredTags.forEach(tag => {
                 html += `
                     <div class="json-container">
                         {<br>
-                        &nbsp;&nbsp;<span class="property">"name"</span>: <span class="string">"${character.name.replace(/"/g, '\\"')}"</span>,<br>
-                        &nbsp;&nbsp;<span class="property">"value"</span>: <span class="number">${character.value}</span>,<br>
-                        &nbsp;&nbsp;<span class="property">"gender"</span>: <span class="string">"${gender}"</span>,<br>
-                        &nbsp;&nbsp;<span class="property">"source"</span>: <span class="string">"${character.source.replace(/"/g, '\\"')}"</span>,<br>
-                        &nbsp;&nbsp;<span class="property">"keyword"</span>: <span class="string">"${character.keyword}"</span><br>
+                        &nbsp;&nbsp;<span class="property">"name"</span>: <span class="string">"${tag.name.replace(/_/g, ' ').replace(/"/g, '\\"')}"</span>,<br>
+                        &nbsp;&nbsp;<span class="property">"value"</span>: <span class="number">${tag.count}</span>,<br>
+                        &nbsp;&nbsp;<span class="property">"gender"</span>: <span class="string">"${determineGender(tag.name)}"</span>,<br>
+                        &nbsp;&nbsp;<span class="property">"source"</span>: <span class="string">"${seriesName}"</span>,<br>
+                        &nbsp;&nbsp;<span class="property">"keyword"</span>: <span class="string">"${tag.name}"</span><br>
                         }
                     </div>
                     <p style="margin-top: 5px; margin-bottom: 20px;">
                         Ver en Gelbooru: 
-                        <a href="https://gelbooru.com/index.php?page=post&s=list&tags=${encodeURIComponent(character.keyword)}" 
+                        <a href="https://gelbooru.com/index.php?page=post&s=list&tags=${encodeURIComponent(tag.name)}" 
                            target="_blank" style="color: #3498db; text-decoration: none;">
-                            ${character.keyword} (${character.value} posts)
+                            ${tag.name} (${tag.count} posts)
                         </a>
                     </p>
                 `;
             });
             
             resultsDiv.innerHTML = html;
+        }
+        
+        // Función para determinar género basado en el tag (aproximado)
+        function determineGender(tagName) {
+            const lowerTag = tagName.toLowerCase();
+            
+            if (lowerTag.includes('female') || lowerTag.includes('girl') || 
+                lowerTag.includes('woman') || lowerTag.endsWith('_f') ||
+                lowerTag.includes('_female')) {
+                return "Mujer";
+            }
+            else if (lowerTag.includes('male') || lowerTag.includes('boy') || 
+                     lowerTag.includes('man') || lowerTag.endsWith('_m') ||
+                     lowerTag.includes('_male')) {
+                return "Hombre";
+            }
+            
+            return "Desconocido";
         }
     </script>
 </body>
