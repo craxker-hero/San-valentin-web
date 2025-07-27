@@ -3,251 +3,428 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador de Series en Gelbooru</title>
+    <title>Buscador de Personajes Anime/Series - Gelbooru API</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f0f2f5;
+            background-color: #f5f5f5;
             color: #333;
         }
+        
         h1 {
             color: #2c3e50;
             text-align: center;
             margin-bottom: 30px;
         }
+        
         .search-container {
             background-color: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .search-box {
-            display: flex;
-            gap: 10px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
         }
+        
         input[type="text"] {
-            flex: 1;
+            width: 100%;
             padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
             font-size: 16px;
-            transition: border 0.3s;
+            box-sizing: border-box;
         }
-        input[type="text"]:focus {
-            border-color: #3498db;
-            outline: none;
-        }
+        
         button {
-            padding: 12px 24px;
             background-color: #3498db;
             color: white;
             border: none;
-            border-radius: 6px;
+            padding: 12px 20px;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
-            font-weight: bold;
+            margin-top: 10px;
             transition: background-color 0.3s;
         }
+        
         button:hover {
             background-color: #2980b9;
         }
-        .results {
-            margin-top: 30px;
+        
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
         }
-        .json-container {
-            background-color: #282c34;
-            color: #abb2bf;
-            padding: 20px;
-            border-radius: 8px;
-            overflow-x: auto;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            margin-top: 15px;
-            border-left: 4px solid #3498db;
-        }
-        .property {
-            color: #61afef;
-        }
-        .string {
-            color: #98c379;
-        }
-        .number {
-            color: #d19a66;
-        }
-        .no-results {
-            color: #e74c3c;
-            font-weight: bold;
-            padding: 15px;
-            background-color: #fde8e8;
-            border-radius: 6px;
-            text-align: center;
-        }
-        .instructions {
-            background-color: #e8f4fd;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            border-left: 4px solid #3498db;
-        }
+        
         .loading {
             display: inline-block;
             width: 20px;
             height: 20px;
             border: 3px solid rgba(255,255,255,.3);
             border-radius: 50%;
-            border-top-color: #3498db;
+            border-top-color: #fff;
             animation: spin 1s ease-in-out infinite;
-            margin-right: 10px;
+            margin-left: 10px;
         }
+        
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+        
+        .results {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        
+        .character-card {
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+        }
+        
+        .character-card:last-child {
+            border-bottom: none;
+        }
+        
+        .character-name {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        
+        .character-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        
+        .character-meta span {
+            background-color: #f0f0f0;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+        
+        .error {
+            color: #e74c3c;
+            background-color: #fadbd8;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
+    <h1>Buscador de Personajes Anime/Series</h1>
+    
     <div class="search-container">
-        <h1>Buscador de Series en Gelbooru</h1>
-        
-        <div class="instructions">
-            <p>Ingresa el nombre de una serie para buscar sus tags en Gelbooru. Ejemplo: <em>Dragon Ball</em>, <em>Naruto</em>, <em>One Piece</em></p>
-        </div>
-        
-        <div class="search-box">
-            <input type="text" id="seriesName" placeholder="Ej: Attack on Titan, Jujutsu Kaisen...">
-            <button onclick="searchSeries()" id="searchButton">Buscar</button>
-        </div>
-        
-        <div id="results" class="results">
-            <!-- Los resultados se mostrarán aquí -->
-        </div>
+        <input type="text" id="searchInput" placeholder="Ingresa el nombre de una serie o anime (ej. 'Naruto', 'One Piece')">
+        <button id="searchButton">Buscar Personajes</button>
+        <span id="loadingIndicator" class="loading hidden"></span>
+    </div>
+    
+    <div id="errorContainer" class="error hidden"></div>
+    
+    <div class="results">
+        <h2>Resultados</h2>
+        <div id="resultsContainer"></div>
+        <pre id="jsonOutput" class="hidden"></pre>
     </div>
 
     <script>
-        // Función principal de búsqueda
-        async function searchSeries() {
-            const seriesName = document.getElementById('seriesName').value.trim();
-            const resultsDiv = document.getElementById('results');
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
             const searchButton = document.getElementById('searchButton');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const jsonOutput = document.getElementById('jsonOutput');
+            const errorContainer = document.getElementById('errorContainer');
             
-            if (!seriesName) {
-                resultsDiv.innerHTML = `<div class="no-results">Por favor ingresa el nombre de una serie</div>`;
-                return;
+            // Función para determinar el género basado en convenciones de tags
+            function determineGender(tagName) {
+                const lowerTag = tagName.toLowerCase();
+                
+                // Lista de sufijos comunes para personajes femeninos
+                const femaleSuffixes = [
+                    '_(female)', '_(girl)', '_(woman)', '_female', '_girl', '_woman',
+                    '-female', '-girl', '-woman', 'female_', 'girl_', 'woman_'
+                ];
+                
+                // Lista de sufijos comunes para personajes masculinos
+                const maleSuffixes = [
+                    '_(male)', '_(boy)', '_(man)', '_male', '_boy', '_man',
+                    '-male', '-boy', '-man', 'male_', 'boy_', 'man_'
+                ];
+                
+                // Verificar sufijos femeninos
+                if (femaleSuffixes.some(suffix => lowerTag.includes(suffix))) {
+                    return 'female';
+                }
+                
+                // Verificar sufijos masculinos
+                if (maleSuffixes.some(suffix => lowerTag.includes(suffix))) {
+                    return 'male';
+                }
+                
+                // Patrones de nombres comunes
+                if (/(chan|ko|mi|ka|na|sa|ri)$/.test(lowerTag)) {
+                    return 'female';
+                }
+                
+                if (/(kun|rou|ji|ta|shi|to|ru)$/.test(lowerTag)) {
+                    return 'male';
+                }
+                
+                // Si no se puede determinar, devolver unknown
+                return 'unknown';
             }
             
-            // Mostrar estado de carga
-            searchButton.disabled = true;
-            searchButton.innerHTML = `<span class="loading"></span>Buscando...`;
-            resultsDiv.innerHTML = `<div style="text-align: center;"><span class="loading"></span>Buscando "${seriesName}" en Gelbooru...</div>`;
-            
-            try {
-                // Buscar tags relacionados con la serie
-                const tags = await fetchSeriesTags(seriesName);
+            // Función para limpiar y formatear el nombre del personaje
+            function cleanCharacterName(tagName) {
+                // Eliminar prefijos/sufijos comunes de género
+                let cleaned = tagName
+                    .replace(/_(female|male|girl|boy|woman|man)/i, '')
+                    .replace(/-(female|male|girl|boy|woman|man)/i, '')
+                    .replace(/(female|male|girl|boy|woman|man)_/i, '');
                 
-                if (tags.length === 0) {
-                    resultsDiv.innerHTML = `
-                        <div class="no-results">
-                            No se encontraron tags para "${seriesName}". Prueba con otro nombre.
-                        </div>
-                    `;
+                // Reemplazar guiones bajos con espacios
+                cleaned = cleaned.replace(/_/g, ' ');
+                
+                // Capitalizar palabras
+                cleaned = cleaned.split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    .join(' ');
+                
+                return cleaned;
+            }
+            
+            // Función para extraer el nombre de la serie del tag
+            function extractSource(tagName) {
+                // Buscar patrones comunes como "from <serie>" o "series: <serie>"
+                const fromMatch = tagName.match(/from_([^_]+)/i);
+                if (fromMatch) return cleanCharacterName(fromMatch[1]);
+                
+                const seriesMatch = tagName.match(/series_([^_]+)/i);
+                if (seriesMatch) return cleanCharacterName(seriesMatch[1]);
+                
+                // Si no hay patrones claros, devolver unknown
+                return 'unknown';
+            }
+            
+            // Función para buscar tags relacionados con la serie
+            async function searchSeriesTags(seriesName) {
+                try {
+                    // Usamos un proxy para evitar problemas CORS (en producción necesitarías tu propio backend)
+                    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+                    const apiUrl = `https://gelbooru.com/index.php?page=dapi&s=tag&q=index.json&json=1&name_pattern=%${encodeURIComponent(seriesName)}%`;
+                    
+                    const response = await fetch(proxyUrl + apiUrl, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    return data.tag || [];
+                } catch (error) {
+                    console.error('Error fetching series tags:', error);
+                    throw error;
+                }
+            }
+            
+            // Función para buscar personajes asociados a tags de series
+            async function searchCharacters(seriesTags) {
+                try {
+                    // Filtramos tags que probablemente sean series (basado en conteo de posts y nombre)
+                    const probableSeriesTags = seriesTags
+                        .filter(tag => tag.count > 100) // Filtramos tags con pocos posts
+                        .sort((a, b) => b.count - a.count); // Ordenamos por popularidad
+                    
+                    if (probableSeriesTags.length === 0) {
+                        return [];
+                    }
+                    
+                    // Buscamos personajes relacionados con estas series
+                    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+                    const characterPromises = probableSeriesTags.map(async seriesTag => {
+                        const apiUrl = `https://gelbooru.com/index.php?page=dapi&s=tag&q=index.json&json=1&name_pattern=%${encodeURIComponent(seriesTag.name)}%_%&limit=50`;
+                        
+                        const response = await fetch(proxyUrl + apiUrl, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            console.error(`Error fetching characters for ${seriesTag.name}`);
+                            return [];
+                        }
+                        
+                        const data = await response.json();
+                        return data.tag || [];
+                    });
+                    
+                    const characterArrays = await Promise.all(characterPromises);
+                    let allCharacters = characterArrays.flat();
+                    
+                    // Filtramos solo tags que son probablemente personajes
+                    allCharacters = allCharacters.filter(tag => {
+                        // Personajes suelen tener el formato "nombre_personaje (from serie)" o similar
+                        return tag.name.includes('_') && 
+                               !tag.name.includes('tagme') &&
+                               !tag.name.includes('ambiguous') &&
+                               !tag.name.includes('unknown');
+                    });
+                    
+                    // Eliminamos duplicados (mismo nombre de personaje)
+                    const uniqueCharacters = [];
+                    const seenNames = new Set();
+                    
+                    allCharacters.forEach(character => {
+                        const baseName = character.name.split('_')[0];
+                        if (!seenNames.has(baseName)) {
+                            seenNames.add(baseName);
+                            uniqueCharacters.push(character);
+                        }
+                    });
+                    
+                    // Ordenamos por popularidad
+                    return uniqueCharacters.sort((a, b) => b.count - a.count);
+                } catch (error) {
+                    console.error('Error fetching characters:', error);
+                    throw error;
+                }
+            }
+            
+            // Función para procesar y mostrar los resultados
+            function displayResults(characters) {
+                if (characters.length === 0) {
+                    resultsContainer.innerHTML = '<p>No se encontraron personajes para esta serie.</p>';
+                    jsonOutput.classList.add('hidden');
                     return;
                 }
                 
-                // Mostrar resultados
-                displayResults(tags, seriesName);
+                // Procesamos los datos para el formato requerido
+                const formattedResults = characters.map(character => {
+                    const name = cleanCharacterName(character.name);
+                    const source = extractSource(character.name);
+                    const gender = determineGender(character.name);
+                    
+                    return {
+                        name: name,
+                        value: character.count,
+                        gender: gender,
+                        source: source,
+                        keyword: character.name
+                    };
+                });
                 
-            } catch (error) {
-                console.error("Error:", error);
-                resultsDiv.innerHTML = `
-                    <div class="no-results">
-                        Error al buscar: ${error.message}<br>
-                        Intenta nuevamente o prueba con otra serie.
-                    </div>
-                `;
-            } finally {
-                searchButton.disabled = false;
-                searchButton.textContent = "Buscar";
-            }
-        }
-        
-        // Buscar tags relacionados con la serie
-        async function fetchSeriesTags(seriesName) {
-            const encodedName = encodeURIComponent(seriesName);
-            const response = await fetch(`https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1&name_pattern=${encodedName}~`);
-            
-            if (!response.ok) {
-                throw new Error(`Error HTTP: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            return data.tag || [];
-        }
-        
-        // Mostrar los resultados en el formato JSON especificado
-        function displayResults(tags, seriesName) {
-            const resultsDiv = document.getElementById('results');
-            let html = `<h3>Tags para "${seriesName}" encontrados:</h3>`;
-            
-            // Filtrar y ordenar los tags más relevantes
-            const filteredTags = tags
-                .filter(tag => tag.count > 10) // Ignorar tags con muy pocos posts
-                .sort((a, b) => b.count - a.count) // Ordenar por popularidad
-                .slice(0, 10); // Limitar a 10 resultados
-            
-            if (filteredTags.length === 0) {
-                resultsDiv.innerHTML = `
-                    <div class="no-results">
-                        No se encontraron tags relevantes para "${seriesName}".
-                    </div>
-                `;
-                return;
+                // Mostramos los resultados en formato legible
+                resultsContainer.innerHTML = '';
+                formattedResults.forEach(result => {
+                    const characterCard = document.createElement('div');
+                    characterCard.className = 'character-card';
+                    
+                    const genderEmoji = result.gender === 'female' ? '♀' : 
+                                      result.gender === 'male' ? '♂' : '⚧';
+                    
+                    characterCard.innerHTML = `
+                        <div class="character-name">${result.name}</div>
+                        <div class="character-meta">
+                            <span>Posts: ${result.value}</span>
+                            <span>Género: ${genderEmoji} ${result.gender}</span>
+                            <span>Serie: ${result.source}</span>
+                            <span><a href="https://gelbooru.com/index.php?page=post&s=list&tags=${encodeURIComponent(result.keyword)}" target="_blank">Ver en Gelbooru</a></span>
+                        </div>
+                    `;
+                    
+                    resultsContainer.appendChild(characterCard);
+                });
+                
+                // Mostramos el JSON formateado
+                jsonOutput.textContent = JSON.stringify(formattedResults, null, 2);
+                jsonOutput.classList.remove('hidden');
+                
+                // Resaltado de sintaxis básico para el JSON
+                Prism.highlightElement(jsonOutput);
             }
             
-            filteredTags.forEach(tag => {
-                html += `
-                    <div class="json-container">
-                        {<br>
-                        &nbsp;&nbsp;<span class="property">"name"</span>: <span class="string">"${tag.name.replace(/_/g, ' ').replace(/"/g, '\\"')}"</span>,<br>
-                        &nbsp;&nbsp;<span class="property">"value"</span>: <span class="number">${tag.count}</span>,<br>
-                        &nbsp;&nbsp;<span class="property">"gender"</span>: <span class="string">"${determineGender(tag.name)}"</span>,<br>
-                        &nbsp;&nbsp;<span class="property">"source"</span>: <span class="string">"${seriesName}"</span>,<br>
-                        &nbsp;&nbsp;<span class="property">"keyword"</span>: <span class="string">"${tag.name}"</span><br>
-                        }
-                    </div>
-                    <p style="margin-top: 5px; margin-bottom: 20px;">
-                        Ver en Gelbooru: 
-                        <a href="https://gelbooru.com/index.php?page=post&s=list&tags=${encodeURIComponent(tag.name)}" 
-                           target="_blank" style="color: #3498db; text-decoration: none;">
-                            ${tag.name} (${tag.count} posts)
-                        </a>
-                    </p>
-                `;
+            // Manejador del evento de búsqueda
+            searchButton.addEventListener('click', async function() {
+                const searchTerm = searchInput.value.trim();
+                
+                if (!searchTerm) {
+                    errorContainer.textContent = 'Por favor ingresa un término de búsqueda.';
+                    errorContainer.classList.remove('hidden');
+                    return;
+                }
+                
+                // Limpiar resultados anteriores
+                resultsContainer.innerHTML = '';
+                jsonOutput.classList.add('hidden');
+                errorContainer.classList.add('hidden');
+                
+                // Mostrar indicador de carga
+                searchButton.disabled = true;
+                loadingIndicator.classList.remove('hidden');
+                
+                try {
+                    // Paso 1: Buscar tags relacionados con la serie
+                    const seriesTags = await searchSeriesTags(searchTerm);
+                    
+                    if (seriesTags.length === 0) {
+                        resultsContainer.innerHTML = '<p>No se encontraron series/animes que coincidan con tu búsqueda.</p>';
+                        return;
+                    }
+                    
+                    // Paso 2: Buscar personajes asociados a esos tags
+                    const characters = await searchCharacters(seriesTags);
+                    
+                    // Paso 3: Mostrar resultados
+                    displayResults(characters);
+                } catch (error) {
+                    console.error('Error en la búsqueda:', error);
+                    errorContainer.textContent = `Error al realizar la búsqueda: ${error.message}`;
+                    errorContainer.classList.remove('hidden');
+                } finally {
+                    // Ocultar indicador de carga
+                    searchButton.disabled = false;
+                    loadingIndicator.classList.add('hidden');
+                }
             });
             
-            resultsDiv.innerHTML = html;
-        }
-        
-        // Función para determinar género basado en el tag (aproximado)
-        function determineGender(tagName) {
-            const lowerTag = tagName.toLowerCase();
-            
-            if (lowerTag.includes('female') || lowerTag.includes('girl') || 
-                lowerTag.includes('woman') || lowerTag.endsWith('_f') ||
-                lowerTag.includes('_female')) {
-                return "Mujer";
-            }
-            else if (lowerTag.includes('male') || lowerTag.includes('boy') || 
-                     lowerTag.includes('man') || lowerTag.endsWith('_m') ||
-                     lowerTag.includes('_male')) {
-                return "Hombre";
-            }
-            
-            return "Desconocido";
-        }
+            // Permitir búsqueda con Enter
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchButton.click();
+                }
+            });
+        });
     </script>
+    
+    <!-- Librería para resaltado de sintaxis (opcional) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet" />
 </body>
 </html>
