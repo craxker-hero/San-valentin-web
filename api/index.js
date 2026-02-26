@@ -1,0 +1,37 @@
+export default function handler(req, res) {
+  const banner = req.query.banner || 'https://i.ibb.co/v4x8kZC5/a9e20765fe34.jpg'
+  const title = req.query.title || 'MiBot'
+  const desc = req.query.desc || 'Bot de WhatsApp • Siempre activo'
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <meta property="og:title" content="${title}" />
+  <meta property="og:description" content="${desc}" />
+  <meta property="og:image" content="${banner}" />
+  <meta property="og:image:width" content="800" />
+  <meta property="og:image:height" content="800" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="${banner}" />
+  <style>
+    body { background:#050810; color:#e8f4f0; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; flex-direction:column; gap:16px; }
+    img { width:120px; height:120px; border-radius:20px; object-fit:cover; border:2px solid rgba(0,255,180,0.3); }
+    h1 { color:#00ffb3; font-size:1.8rem; }
+    p { color:rgba(255,255,255,0.4); font-size:0.9rem; }
+  </style>
+</head>
+<body>
+  <img src="${banner}" alt="Banner" onerror="this.style.display='none'" />
+  <h1>🤖 ${title}</h1>
+  <p>${desc}</p>
+</body>
+</html>`
+
+  res.setHeader('Content-Type', 'text/html')
+  res.setHeader('Cache-Control', 'no-store')
+  res.status(200).send(html)
+}
