@@ -1,426 +1,63 @@
-<!DOCTYPE html>
+export default function handler(req, res) {
+  // Obtiene el banner de la URL: ?banner=https://imagen.jpg
+  const banner = req.query.banner || 'https://i.ibb.co/v4x8kZC5/a9e20765fe34.jpg'
+  const title = req.query.title || 'MiBot'
+  const desc = req.query.desc || 'Bot de WhatsApp • Siempre activo'
+
+  const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
 
-  <!-- ═══════════════════════════════════════════ -->
-  <!--   OPEN GRAPH — WhatsApp leerá esto         -->
-  <!--   y mostrará la imagen grande en el chat   -->
-  <!-- ═══════════════════════════════════════════ -->
-  <title>🤖 MiBot — WhatsApp Bot</title>
-
-  <meta property="og:title"        content="🤖 MiBot" />
-  <meta property="og:description"  content="Bot de WhatsApp • /menu • /ping • Siempre activo" />
-  <!-- 🔴 CAMBIA esta URL por la imagen que tú quieras (debe ser pública) -->
-  <meta property="og:image"        content="https://i.ibb.co/v4x8kZC5/a9e20765fe34.jpg" />
+  <!-- Open Graph dinámico -->
+  <meta property="og:title"        content="${title}" />
+  <meta property="og:description"  content="${desc}" />
+  <meta property="og:image"        content="${banner}" />
   <meta property="og:image:width"  content="800" />
   <meta property="og:image:height" content="800" />
   <meta property="og:type"         content="website" />
-  <!-- 🔴 CAMBIA esta URL por la tuya cuando subas la página -->
-  <meta property="og:url"          content="https://tuusuario.github.io/mibot/" />
+  <meta property="og:url"          content="https://san-valentin-web-eight.vercel.app" />
 
-  <!-- Twitter Card (respaldo) -->
+  <!-- Twitter Card -->
   <meta name="twitter:card"        content="summary_large_image" />
-  <meta name="twitter:title"       content="🤖 MiBot" />
-  <meta name="twitter:description" content="Bot de WhatsApp • /menu • /ping • Siempre activo" />
-  <meta name="twitter:image"       content="https://i.ibb.co/v4x8kZC5/a9e20765fe34.jpg" />
-
-  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;600;800&family=JetBrains+Mono:wght@300;400;700&display=swap" rel="stylesheet">
+  <meta name="twitter:title"       content="${title}" />
+  <meta name="twitter:description" content="${desc}" />
+  <meta name="twitter:image"       content="${banner}" />
 
   <style>
-    :root {
-      --bg:       #050810;
-      --surface:  #0b1120;
-      --border:   rgba(0,255,180,0.12);
-      --glow:     #00ffb3;
-      --glow2:    #00cfff;
-      --text:     #e8f4f0;
-      --muted:    rgba(232,244,240,0.4);
-      --danger:   #ff4f7b;
-    }
-
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Oxanium', sans-serif;
-      overflow-x: hidden;
-    }
-
-    /* ── Fondo animado ── */
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background:
-        radial-gradient(ellipse 60% 50% at 10% 10%, rgba(0,255,180,0.06) 0%, transparent 70%),
-        radial-gradient(ellipse 50% 60% at 90% 90%, rgba(0,207,255,0.07) 0%, transparent 70%),
-        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(255,79,123,0.03) 0%, transparent 70%);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* Grid de fondo */
-    body::after {
-      content: '';
-      position: fixed; inset: 0;
-      background-image:
-        linear-gradient(rgba(0,255,180,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,255,180,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .wrap {
-      position: relative; z-index: 1;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 20px;
-      gap: 48px;
-    }
-
-    /* ── Header ── */
-    .header {
-      text-align: center;
-      animation: fadeDown 0.9s cubic-bezier(.16,1,.3,1) both;
-    }
-
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      background: rgba(0,255,180,0.07);
-      border: 1px solid rgba(0,255,180,0.2);
-      border-radius: 100px;
-      padding: 6px 16px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      color: var(--glow);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-bottom: 20px;
-    }
-
-    .dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--glow);
-      animation: blink 1.4s infinite;
-    }
-
-    h1 {
-      font-size: clamp(2.8rem, 8vw, 5.5rem);
-      font-weight: 800;
-      line-height: 1;
-      letter-spacing: -2px;
-      background: linear-gradient(135deg, var(--glow) 0%, var(--glow2) 60%, var(--danger) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 12px;
-    }
-
-    .subtitle {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--muted);
-      font-size: clamp(0.75rem, 2vw, 0.95rem);
-      letter-spacing: 3px;
-      text-transform: uppercase;
-    }
-
-    /* ── Card central ── */
-    .card {
-      width: 100%;
-      max-width: 480px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      padding: 36px;
-      position: relative;
-      overflow: hidden;
-      animation: fadeUp 0.9s cubic-bezier(.16,1,.3,1) 0.15s both;
-      box-shadow:
-        0 0 0 1px rgba(0,255,180,0.05),
-        0 24px 64px rgba(0,0,0,0.6),
-        inset 0 1px 0 rgba(255,255,255,0.04);
-    }
-
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--glow), var(--glow2), transparent);
-    }
-
-    /* Imagen del bot */
-    .bot-avatar {
-      width: 90px; height: 90px;
-      border-radius: 22px;
-      background: linear-gradient(135deg, #0b2a20, #0a1e2e);
-      border: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 44px;
-      margin: 0 auto 20px;
-      box-shadow: 0 0 30px rgba(0,255,180,0.15);
-      position: relative;
-    }
-
-    .bot-avatar::after {
-      content: '';
-      position: absolute;
-      inset: -1px;
-      border-radius: 22px;
-      background: linear-gradient(135deg, var(--glow), var(--glow2));
-      z-index: -1;
-      opacity: 0.3;
-    }
-
-    .bot-name {
-      text-align: center;
-      font-size: 1.5rem;
-      font-weight: 800;
-      margin-bottom: 4px;
-      color: var(--text);
-    }
-
-    .bot-handle {
-      text-align: center;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      color: var(--glow);
-      margin-bottom: 28px;
-      letter-spacing: 1px;
-    }
-
-    /* Separador */
-    .sep {
-      height: 1px;
-      background: var(--border);
-      margin-bottom: 24px;
-    }
-
-    /* Comandos */
-    .cmd-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 28px;
-    }
-
-    .cmd {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      background: rgba(0,255,180,0.03);
-      border: 1px solid rgba(0,255,180,0.08);
-      border-radius: 12px;
-      padding: 12px 16px;
-      transition: background 0.2s, border-color 0.2s;
-      cursor: default;
-    }
-
-    .cmd:hover {
-      background: rgba(0,255,180,0.07);
-      border-color: rgba(0,255,180,0.2);
-    }
-
-    .cmd-icon {
-      font-size: 20px;
-      width: 36px; height: 36px;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(0,255,180,0.06);
-      border-radius: 10px;
-      flex-shrink: 0;
-    }
-
-    .cmd-text h4 {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      color: var(--glow);
-      font-weight: 700;
-    }
-
-    .cmd-text p {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    /* Botón de contacto */
-    .wa-btn {
+    body {
+      background: #050810;
+      color: #e8f4f0;
+      font-family: sans-serif;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      width: 100%;
-      padding: 14px;
-      background: linear-gradient(135deg, rgba(0,255,180,0.15), rgba(0,207,255,0.1));
-      border: 1px solid rgba(0,255,180,0.25);
-      border-radius: 14px;
-      color: var(--glow);
-      font-family: 'Oxanium', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      text-decoration: none;
-      letter-spacing: 1px;
-      transition: all 0.2s;
+      height: 100vh;
+      flex-direction: column;
+      gap: 16px;
     }
-
-    .wa-btn:hover {
-      background: linear-gradient(135deg, rgba(0,255,180,0.25), rgba(0,207,255,0.18));
-      box-shadow: 0 0 20px rgba(0,255,180,0.2);
-      transform: translateY(-1px);
+    img {
+      width: 120px;
+      height: 120px;
+      border-radius: 20px;
+      object-fit: cover;
+      border: 2px solid rgba(0,255,180,0.3);
     }
-
-    /* ── Stats ── */
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      width: 100%;
-      max-width: 480px;
-      animation: fadeUp 0.9s cubic-bezier(.16,1,.3,1) 0.3s both;
-    }
-
-    .stat {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 18px 12px;
-      text-align: center;
-    }
-
-    .stat-val {
-      font-size: 1.6rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--glow), var(--glow2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .stat-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-top: 4px;
-    }
-
-    /* ── Footer ── */
-    .footer {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      color: rgba(232,244,240,0.2);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      animation: fadeUp 0.9s cubic-bezier(.16,1,.3,1) 0.45s both;
-    }
-
-    /* ── Animaciones ── */
-    @keyframes fadeDown {
-      from { opacity:0; transform: translateY(-24px); }
-      to   { opacity:1; transform: translateY(0); }
-    }
-    @keyframes fadeUp {
-      from { opacity:0; transform: translateY(24px); }
-      to   { opacity:1; transform: translateY(0); }
-    }
-    @keyframes blink {
-      0%,100% { opacity:1; }
-      50%      { opacity:0.3; }
-    }
-
-    /* ── Scanline effect ── */
-    .scanline {
-      position: fixed; inset: 0;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0,0,0,0.03) 2px,
-        rgba(0,0,0,0.03) 4px
-      );
-      pointer-events: none;
-      z-index: 999;
-    }
+    h1 { color: #00ffb3; font-size: 1.8rem; }
+    p  { color: rgba(255,255,255,0.4); font-size: 0.9rem; }
   </style>
 </head>
 <body>
-
-<div class="scanline"></div>
-
-<div class="wrap">
-
-  <!-- Header -->
-  <div class="header">
-    <div class="status-pill">
-      <span class="dot"></span>
-      online · activo
-    </div>
-    <h1>MiBot</h1>
-    <p class="subtitle">WhatsApp Bot · v1.0</p>
-  </div>
-
-  <!-- Card -->
-  <div class="card">
-    <div class="bot-avatar">🤖</div>
-    <div class="bot-name">MiBot</div>
-    <!-- 🔴 Cambia el número por el tuyo -->
-    <div class="bot-handle">wa.me/521234567890</div>
-
-    <div class="sep"></div>
-
-    <div class="cmd-list">
-      <div class="cmd">
-        <div class="cmd-icon">🏓</div>
-        <div class="cmd-text">
-          <h4>/ping</h4>
-          <p>Verifica que el bot está activo</p>
-        </div>
-      </div>
-      <div class="cmd">
-        <div class="cmd-icon">📋</div>
-        <div class="cmd-text">
-          <h4>/menu</h4>
-          <p>Muestra el menú de comandos</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- 🔴 Cambia el número por el tuyo -->
-    <a class="wa-btn" href="https://wa.me/521234567890" target="_blank">
-      💬 &nbsp;Abrir en WhatsApp
-    </a>
-  </div>
-
-  <!-- Stats decorativos -->
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-val">2</div>
-      <div class="stat-label">Comandos</div>
-    </div>
-    <div class="stat">
-      <div class="stat-val">24/7</div>
-      <div class="stat-label">Activo</div>
-    </div>
-    <div class="stat">
-      <div class="stat-val">v1</div>
-      <div class="stat-label">Versión</div>
-    </div>
-  </div>
-
-  <div class="footer">Built with Baileys · Termux</div>
-
-</div>
-
+  <img src="${banner}" alt="Banner" onerror="this.style.display='none'" />
+  <h1>🤖 ${title}</h1>
+  <p>${desc}</p>
 </body>
-</html>
+</html>`
+
+  res.setHeader('Content-Type', 'text/html')
+  res.setHeader('Cache-Control', 'no-store') // Sin caché para que siempre sea dinámico
+  res.status(200).send(html)
+}
